@@ -1,4 +1,4 @@
-# URL Routes Reference - OFO-DBMS
+# URL Routes Reference — OFO-DBMS
 
 This document lists every URL route in the application, its HTTP methods, required authentication level, and purpose.
 
@@ -18,15 +18,14 @@ This document lists every URL route in the application, its HTTP methods, requir
 
 | Prefix | App |
 |---|---|
-| / | 
-estaurants (storefront) |
-| /accounts/ | ccounts (auth & profile) |
+| / | restaurants (storefront) |
+| /accounts/ | accounts (auth & profile) |
 | /orders/ | orders (cart, checkout, dashboard) |
 | /admin/ | Django Admin |
 
 ---
 
-## Storefront & Menu - restaurants/ (mounted at /)
+## Storefront & Menu — restaurants/ (mounted at /)
 
 | URL | Name | Method | Auth | Description |
 |---|---|---|---|---|
@@ -39,12 +38,12 @@ estaurants (storefront) |
 |---|---|---|
 | q | string | Search term (filters by dish name) |
 | category | string | Category name filter |
-| eg | true/false | Veg-only toggle filter |
+| veg | true/false | Veg-only toggle filter |
 | sort | price_asc / rating_desc | Sort order |
 
 ---
 
-## Authentication & Profile - accounts/ (mounted at /accounts/)
+## Authentication & Profile — accounts/ (mounted at /accounts/)
 
 | URL | Name | Method | Auth | Description |
 |---|---|---|---|---|
@@ -55,7 +54,7 @@ estaurants (storefront) |
 
 ---
 
-## Shopping Cart - orders/cart/ (mounted at /orders/)
+## Shopping Cart — orders/cart/ (mounted at /orders/)
 
 | URL | Name | Method | Auth | Description |
 |---|---|---|---|---|
@@ -70,14 +69,13 @@ estaurants (storefront) |
 | Field | Type | Description |
 |---|---|---|
 | quantity | integer | Units to add (default: 1) |
-| 
-ext | string | Optional redirect URL after adding |
+| next | string | Optional redirect URL after adding |
 
 **POST body for update_cart:**
 
 | Field | Type | Description |
 |---|---|---|
-| ction | increment / decrement | Quick +1 / -1 adjustment |
+| action | increment / decrement | Quick +1 / -1 adjustment |
 | quantity | integer | Override quantity (if action not provided) |
 
 ---
@@ -104,7 +102,7 @@ ext | string | Optional redirect URL after adding |
 
 ---
 
-## Restaurant Admin Dashboard (mounted at /orders/) - Staff Only
+## Restaurant Admin Dashboard (mounted at /orders/) — Staff Only
 
 | URL | Name | Method | Auth | Description |
 |---|---|---|---|---|
@@ -118,14 +116,13 @@ ext | string | Optional redirect URL after adding |
 | Field | Type | Description |
 |---|---|---|
 | status | order status choice | New order status |
-| driver_id | integer | Optional - ID of DeliveryPartner to assign |
+| driver_id | integer | Optional — ID of DeliveryPartner to assign |
 
 **POST body for add_delivery_partner:**
 
 | Field | Type | Description |
 |---|---|---|
-| 
-ame | string | Driver full name |
+| name | string | Driver full name |
 | phone | string | Driver phone number |
 
 ---

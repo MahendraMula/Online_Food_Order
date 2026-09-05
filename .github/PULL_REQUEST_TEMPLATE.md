@@ -1,19 +1,19 @@
-## ?? Summary
+## Summary
 
 <!-- Describe what this PR does and why. Link any related issues. -->
 
 Closes #<!-- issue number -->
 
-## ?? Type of Change
+## Type of Change
 
-- [ ] ?? Bug fix (non-breaking change that fixes an issue)
-- [ ] ? New feature (non-breaking change that adds functionality)
-- [ ] ?? Breaking change (fix or feature that changes existing behavior)
-- [ ] ?? Documentation update
-- [ ] ?? Refactor / code cleanup
-- [ ] ?? Tests only
+- [ ] Bug fix (non-breaking change that fixes an issue)
+- [ ] New feature (non-breaking change that adds functionality)
+- [ ] Breaking change (fix or feature that changes existing behavior)
+- [ ] Documentation update
+- [ ] Refactor / code cleanup
+- [ ] Tests only
 
-## ?? How to Test
+## How to Test
 
 <!-- Step-by-step instructions to test your changes manually. -->
 
@@ -21,7 +21,7 @@ Closes #<!-- issue number -->
 2. 
 3. 
 
-## ? Checklist
+## Checklist
 
 - [ ] My code follows the [contributing guidelines](../CONTRIBUTING.md)
 - [ ] I have run python run_tests.py and all tests pass
@@ -30,7 +30,7 @@ Closes #<!-- issue number -->
 - [ ] My branch is up to date with main
 - [ ] I have added a descriptive title and filled out this template
 
-## ?? Screenshots (if UI changes)
+## Screenshots (if UI changes)
 
 <!-- Add before/after screenshots if this PR affects any frontend templates. -->
 
@@ -38,6 +38,6 @@ Closes #<!-- issue number -->
 |---|---|
 | | |
 
-## ?? Additional Notes
+## Additional Notes
 
 <!-- Anything else reviewers should know? -->

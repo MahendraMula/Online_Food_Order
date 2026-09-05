@@ -1,31 +1,31 @@
 ---
-name: ?? Bug Report
+name: Bug Report
 about: Report a reproducible bug or unexpected behavior
 title: '[BUG] '
 labels: 'bug, needs-triage'
 assignees: ''
 ---
 
-## ?? Bug Description
+## Bug Description
 
 A clear and concise description of what the bug is.
 
-## ?? Steps to Reproduce
+## Steps to Reproduce
 
 1. Go to '...'
 2. Click on '...'
 3. Enter '...'
 4. See error
 
-## ? Expected Behavior
+## Expected Behavior
 
 A clear description of what you expected to happen.
 
-## ? Actual Behavior
+## Actual Behavior
 
 A clear description of what actually happened.
 
-## ?? Screenshots / Error Logs
+## Screenshots / Error Logs
 
 If applicable, add screenshots or paste the error traceback here.
 
@@ -33,7 +33,7 @@ If applicable, add screenshots or paste the error traceback here.
 Paste error traceback here
 `
 
-## ??? Environment
+## Environment
 
 | Item | Value |
 |---|---|
@@ -42,6 +42,6 @@ Paste error traceback here
 | Django Version | e.g., 5.1.2 |
 | Browser | e.g., Chrome 127, Firefox 128 |
 
-## ?? Additional Context
+## Additional Context
 
 Any other context about the problem (e.g., does it happen only when logged in as staff?).

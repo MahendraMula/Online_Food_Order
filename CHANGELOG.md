@@ -12,9 +12,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 
 ---
 
-## [1.0.0] � 2026-09-05
+## [1.0.0] — 2026-09-05
 
-### ?? Initial Release
+### 🎉 Initial Release
 
 #### Added
 
@@ -28,8 +28,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 - Category-based menu organization: Burgers & Wraps, Pizzas & Pasta, Asian Bowls, Beverages, Desserts
 - Live AJAX-style search bar filtering menu items by name
 - Category carousel chips for quick filtering
-- ?? Pure Veg / ?? Non-Veg toggle filter
-- Price (Low ? High) and Rating (High ? Low) sorting options
+- Pure Veg / Non-Veg toggle filter
+- Price (Low to High) and Rating (High to Low) sorting options
 - Menu item cards with dish image, description, price, prep time, and veg/non-veg badge
 
 **Shopping Cart**
@@ -42,12 +42,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 - Unified checkout page showing all cart items, delivery address, and payment selection
 - Three payment modes: Cash on Delivery (COD), UPI Transfer, Credit/Debit Card
 - Input validation for phone number (regex) and delivery address length
-- Atomic transaction for order creation: Order ? OrderItems ? Payment ? Delivery
+- Atomic transaction for order creation: Order → OrderItems → Payment → Delivery
 - Profile address auto-update on successful checkout
 
 **Order Tracking**
 - Customer order history page with all past orders
-- 4-step visual milestone tracker: *Order Placed ? Kitchen Preparing ? Out for Delivery ? Delivered*
+- 4-step visual milestone tracker: *Order Placed → Kitchen Preparing → Out for Delivery → Delivered*
 - Assigned delivery driver name and contact shown on tracking card
 - Cancel order functionality (for Pending/Placed orders)
 - Printable order receipt/invoice page
@@ -63,13 +63,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 - Category revenue statistics
 
 **Database Architecture**
-- Dual-database setup: ood_ordering.db (app data) + django_database.db (framework internals)
+- Dual-database setup: food_ordering.db (app data) + django_database.db (framework internals)
 - Custom DjangoFrameworkRouter to route Django internals to separate database
 - Full relational schema: CustomerProfile, Category, Restaurant, MenuItem, Review, Order, OrderItem, Payment, DeliveryPartner, Delivery
 
 **Testing**
-- Unit tests for ccounts, estaurants, and orders apps
-- Custom un_tests.py test runner
+- Unit tests for accounts, 
+estaurants, and orders apps
+- Custom 
+un_tests.py test runner
 
 **Project Config**
 - Environment variable support for SECRET_KEY, DEBUG, ALLOWED_HOSTS, SSL settings
