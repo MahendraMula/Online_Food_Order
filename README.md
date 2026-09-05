@@ -275,6 +275,6 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) to get
 ---
 
 <div align="center">
-Made with ❤️ as an academic DBMS project
+Made with ❤️ as an Full Stack as well as DBMS project
 </div>
 
