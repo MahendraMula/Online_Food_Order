@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Account - Food Express{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-4">
+    <div class="col-12 col-md-9 col-lg-7">
+        <div class="card card-custom p-4 p-md-5 shadow-lg border-0">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex p-3 rounded-circle bg-warning-subtle text-warning mb-2">
+                    <i class="bi bi-person-plus-fill fs-2"></i>
+                </div>
+                <h3 class="fw-bold mb-1 text-light">Create Your Account</h3>
+                <p class="text-secondary small mb-0">Join Food Express for instant ordering & real-time delivery tracking</p>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 small border-0 mb-3">
+                    {% for error in form.non_field_errors %}
+                        <div><i class="bi bi-exclamation-circle-fill me-1"></i> {{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-light fw-medium small" for="{{ form.username.id_for_label }}">Username *</label>
+                        <input type="text" name="username" class="form-control bg-dark text-light border-secondary {% if form.username.errors %}is-invalid{% endif %}" id="{{ form.username.id_for_label }}" value="{{ form.username.value|default:'' }}" required placeholder="Choose a username">
+                        {% if form.username.errors %}
+                            <div class="invalid-feedback">{{ form.username.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light fw-medium small" for="{{ form.email.id_for_label }}">Email Address</label>
+                        <input type="email" name="email" class="form-control bg-dark text-light border-secondary {% if form.email.errors %}is-invalid{% endif %}" id="{{ form.email.id_for_label }}" value="{{ form.email.value|default:'' }}" placeholder="name@example.com">
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-light fw-medium small" for="{{ form.first_name.id_for_label }}">First Name</label>
+                        <input type="text" name="first_name" class="form-control bg-dark text-light border-secondary" id="{{ form.first_name.id_for_label }}" value="{{ form.first_name.value|default:'' }}" placeholder="First name">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light fw-medium small" for="{{ form.last_name.id_for_label }}">Last Name</label>
+                        <input type="text" name="last_name" class="form-control bg-dark text-light border-secondary" id="{{ form.last_name.id_for_label }}" value="{{ form.last_name.value|default:'' }}" placeholder="Last name">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-light fw-medium small" for="{{ form.phone.id_for_label }}">Phone Number *</label>
+                        <input type="text" name="phone" class="form-control bg-dark text-light border-secondary {% if form.phone.errors %}is-invalid{% endif %}" id="{{ form.phone.id_for_label }}" value="{{ form.phone.value|default:'' }}" required placeholder="e.g. +1 555-0199">
+                        {% if form.phone.errors %}
+                            <div class="invalid-feedback">{{ form.phone.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light fw-medium small" for="{{ form.address.id_for_label }}">Delivery Address *</label>
+                        <textarea name="address" rows="1" class="form-control bg-dark text-light border-secondary {% if form.address.errors %}is-invalid{% endif %}" id="{{ form.address.id_for_label }}" required placeholder="Street address, city, zip">{{ form.address.value|default:'' }}</textarea>
+                        {% if form.address.errors %}
+                            <div class="invalid-feedback">{{ form.address.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label text-light fw-medium small" for="{{ form.password.id_for_label }}">Password *</label>
+                        <input type="password" name="password" class="form-control bg-dark text-light border-secondary {% if form.password.errors %}is-invalid{% endif %}" id="{{ form.password.id_for_label }}" required placeholder="Create password">
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback">{{ form.password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light fw-medium small" for="{{ form.confirm_password.id_for_label }}">Confirm Password *</label>
+                        <input type="password" name="confirm_password" class="form-control bg-dark text-light border-secondary {% if form.confirm_password.errors %}is-invalid{% endif %}" id="{{ form.confirm_password.id_for_label }}" required placeholder="Confirm password">
+                        {% if form.confirm_password.errors %}
+                            <div class="invalid-feedback">{{ form.confirm_password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-brand w-100 py-2 fw-bold">
+                    <i class="bi bi-person-check me-1"></i> Register Account
+                </button>
+            </form>
+
+            <hr class="border-secondary my-4">
+
+            <div class="text-center">
+                <p class="text-secondary small mb-0">Already registered? 
+                    <a href="{% url 'login' %}" class="text-warning text-decoration-none fw-semibold">Sign In to your account</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

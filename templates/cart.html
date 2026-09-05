@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Your Shopping Cart - Food Express{% endblock %}
+
+{% block content %}
+<div class="row my-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h2 class="fw-bold text-light mb-1">
+                    <i class="bi bi-cart3 text-warning me-2"></i>Your Shopping Cart
+                </h2>
+                <p class="text-secondary small mb-0">Review items in your cart before proceeding to checkout</p>
+            </div>
+            {% if not is_empty %}
+                <form action="{% url 'clear_cart' %}" method="post" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-trash3 me-1"></i> Clear Cart
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+        {% if is_empty %}
+            <div class="card card-custom p-5 text-center border-0 shadow-sm">
+                <div class="d-inline-flex p-4 rounded-circle bg-dark-subtle text-secondary mx-auto mb-3">
+                    <i class="bi bi-cart-x fs-1 text-warning"></i>
+                </div>
+                <h3 class="fw-bold text-light mb-2">Your Cart is Empty</h3>
+                <p class="text-secondary mb-4">You haven't added any dishes to your cart yet. Explore our delicious menu!</p>
+                <div>
+                    <a href="{% url 'storefront' %}" class="btn btn-brand px-4 py-2 fw-semibold">
+                        <i class="bi bi-fire me-1"></i> Browse Food Menu
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="row g-4">
+                <!-- Cart Items List -->
+                <div class="col-lg-8">
+                    <div class="card card-custom p-3 p-md-4 border-0 shadow-sm mb-3">
+                        <h5 class="fw-bold text-light mb-3 pb-2 border-bottom border-secondary">
+                            Cart Items ({{ cart_total_items }})
+                        </h5>
+
+                        <div class="d-flex flex-column gap-3">
+                            {% for entry in cart_items %}
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 pb-3 border-bottom border-secondary">
+                                    <!-- Dish Image & Details -->
+                                    <div class="d-flex align-items-center gap-3">
+                                        {% if entry.item.image_url %}
+                                            <img src="{{ entry.item.image_url }}" alt="{{ entry.item.item_name }}" class="rounded-3" style="width: 75px; height: 75px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 75px; height: 75px;">
+                                                <i class="bi bi-image text-secondary fs-3"></i>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div>
+                                            <h6 class="fw-bold text-light mb-1">{{ entry.item.item_name }}</h6>
+                                            <small class="text-warning d-block">
+                                                <i class="bi bi-shop me-1"></i>{{ entry.item.restaurant.restaurant_name }}
+                                            </small>
+                                            <span class="text-secondary small">${{ entry.unit_price }} each</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quantity Controls & Line Total -->
+                                    <div class="d-flex align-items-center gap-4">
+                                        <form action="{% url 'update_cart' entry.item.id %}" method="post" class="d-flex align-items-center gap-1 m-0">
+                                            {% csrf_token %}
+                                            <button type="submit" name="action" value="decrement" class="btn btn-dark btn-sm border-secondary text-light px-2 py-1">
+                                                <i class="bi bi-dash"></i>
+                                            </button>
+                                            <span class="fw-bold text-light px-2 py-1 bg-dark border border-secondary rounded text-center" style="min-width: 36px;">
+                                                {{ entry.quantity }}
+                                            </span>
+                                            <button type="submit" name="action" value="increment" class="btn btn-dark btn-sm border-secondary text-light px-2 py-1">
+                                                <i class="bi bi-plus"></i>
+                                            </button>
+                                        </form>
+
+                                        <div class="text-end" style="min-width: 70px;">
+                                            <span class="fs-5 fw-bold text-warning">${{ entry.total_price }}</span>
+                                        </div>
+
+                                        <form action="{% url 'remove_from_cart' entry.item.id %}" method="post" class="m-0">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-danger btn-sm p-1 border-0" title="Remove Item">
+                                                <i class="bi bi-trash3 fs-5"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-3 text-start">
+                            <a href="{% url 'storefront' %}" class="text-warning text-decoration-none small fw-semibold">
+                                <i class="bi bi-arrow-left me-1"></i> Add More Items from Menu
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Summary Card -->
+                <div class="col-lg-4">
+                    <div class="card card-custom p-4 border-0 shadow-sm sticky-top" style="top: 80px;">
+                        <h5 class="fw-bold text-light mb-3 pb-2 border-bottom border-secondary">Order Summary</h5>
+
+                        <div class="d-flex justify-content-between text-secondary py-1">
+                            <span>Subtotal ({{ cart_total_items }} items)</span>
+                            <span class="text-light fw-medium">${{ subtotal }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-secondary py-1">
+                            <span>Delivery Fee</span>
+                            <span class="text-success fw-bold">FREE</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-secondary py-1">
+                            <span>Taxes & Fees</span>
+                            <span class="text-light fw-medium">$0.00</span>
+                        </div>
+
+                        <hr class="border-secondary my-3">
+
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <span class="fs-5 fw-bold text-light">Grand Total:</span>
+                            <span class="fs-3 fw-bolder text-warning">${{ grand_total }}</span>
+                        </div>
+
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'checkout' %}" class="btn btn-brand w-100 py-3 fw-bold fs-6">
+                                <i class="bi bi-shield-check me-1"></i> Proceed to Checkout
+                            </a>
+                        {% else %}
+                            <a href="{% url 'login' %}?next={% url 'checkout' %}" class="btn btn-brand w-100 py-3 fw-bold fs-6">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Checkout
+                            </a>
+                        {% endif %}
+
+                        <div class="mt-3 text-center">
+                            <small class="text-secondary">
+                                <i class="bi bi-lock-fill text-success me-1"></i> 100% Safe & Secure Checkout
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

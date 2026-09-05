@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+
+{% block title %}My Orders & Live Tracking - Food Express{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tracking-stepper {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 25px 0 15px 0;
+        padding: 0 10px;
+    }
+    .tracking-stepper::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 30px;
+        right: 30px;
+        height: 4px;
+        background-color: #2d323f;
+        z-index: 1;
+    }
+    .stepper-progress {
+        position: absolute;
+        top: 20px;
+        left: 30px;
+        height: 4px;
+        background: linear-gradient(90deg, #ff6600, #22c55e);
+        z-index: 2;
+        transition: width 0.4s ease;
+    }
+    .step-node {
+        position: relative;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .step-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background-color: #1c1f26;
+        border: 2px solid #3b4252;
+        color: #8b949e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+    }
+    .step-node.completed .step-icon {
+        background-color: #22c55e;
+        border-color: #22c55e;
+        color: #ffffff;
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+    }
+    .step-node.active .step-icon {
+        background-color: #ff6600;
+        border-color: #ff6600;
+        color: #ffffff;
+        box-shadow: 0 0 16px var(--brand-glow);
+        animation: pulse 1.8s infinite;
+    }
+    .step-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 8px;
+        color: #8b949e;
+    }
+    .step-node.completed .step-label { color: #22c55e; }
+    .step-node.active .step-label { color: #ff6600; }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.08); }
+        100% { transform: scale(1); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row my-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h2 class="fw-bold text-light mb-1">
+                    <i class="bi bi-bag-check-fill text-warning me-2"></i>My Orders & Real-Time Tracking
+                </h2>
+                <p class="text-secondary small mb-0">Track kitchen preparation, delivery riders, and past transactions</p>
+            </div>
+            <a href="{% url 'storefront' %}" class="btn btn-outline-brand btn-sm">
+                <i class="bi bi-plus-circle me-1"></i> Order More Food
+            </a>
+        </div>
+
+        {% for order in orders %}
+            <div class="card card-custom mb-4 p-4 shadow-sm border-0">
+                <!-- Order Header -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pb-3 border-bottom border-secondary">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="fs-5 fw-bold text-light">Order #{{ order.id }}</span>
+                            {% if order.status == 'Pending' %}
+                                <span class="badge badge-status-pending px-3 py-1">Pending Confirmation</span>
+                            {% elif order.status == 'Placed' %}
+                                <span class="badge badge-status-placed px-3 py-1">Order Placed</span>
+                            {% elif order.status == 'Preparing' %}
+                                <span class="badge badge-status-preparing px-3 py-1">Kitchen Preparing</span>
+                            {% elif order.status == 'Out for Delivery' %}
+                                <span class="badge badge-status-delivery px-3 py-1">Out for Delivery</span>
+                            {% elif order.status == 'Delivered' %}
+                                <span class="badge badge-status-delivered px-3 py-1">Delivered</span>
+                            {% elif order.status == 'Cancelled' %}
+                                <span class="badge badge-status-cancelled px-3 py-1">Cancelled</span>
+                            {% else %}
+                                <span class="badge bg-secondary px-3 py-1">{{ order.status }}</span>
+                            {% endif %}
+                        </div>
+                        <small class="text-secondary">
+                            <i class="bi bi-calendar3 me-1"></i>Placed on {{ order.order_date|date:"M d, Y • h:i A" }}
+                        </small>
+                    </div>
+
+                    <div class="text-end">
+                        <small class="text-secondary d-block">Grand Total</small>
+                        <span class="fs-4 fw-bolder text-warning">${{ order.total_amount }}</span>
+                    </div>
+                </div>
+
+                <!-- Visual Order Tracking Stepper (if not cancelled) -->
+                {% if order.status != 'Cancelled' %}
+                    <div class="my-3 py-2 bg-dark p-3 rounded-4 border border-secondary">
+                        <div class="tracking-stepper">
+                            <!-- Stepper Progress Bar Width Calculation -->
+                            <div class="stepper-progress" style="
+                                {% if order.status == 'Placed' or order.status == 'Pending' %}width: 15%;
+                                {% elif order.status == 'Preparing' %}width: 48%;
+                                {% elif order.status == 'Out for Delivery' %}width: 80%;
+                                {% elif order.status == 'Delivered' %}width: 100%;
+                                {% else %}width: 0%;{% endif %}">
+                            </div>
+
+                            <!-- Step 1: Placed -->
+                            <div class="step-node {% if order.status == 'Placed' %}active{% elif order.status in 'Preparing,Out for Delivery,Delivered' %}completed{% endif %}">
+                                <div class="step-icon">
+                                    <i class="bi bi-bag-check-fill"></i>
+                                </div>
+                                <span class="step-label">Order Placed</span>
+                            </div>
+
+                            <!-- Step 2: Preparing -->
+                            <div class="step-node {% if order.status == 'Preparing' %}active{% elif order.status in 'Out for Delivery,Delivered' %}completed{% endif %}">
+                                <div class="step-icon">
+                                    <i class="bi bi-fire"></i>
+                                </div>
+                                <span class="step-label">Preparing</span>
+                            </div>
+
+                            <!-- Step 3: Out for Delivery -->
+                            <div class="step-node {% if order.status == 'Out for Delivery' %}active{% elif order.status == 'Delivered' %}completed{% endif %}">
+                                <div class="step-icon">
+                                    <i class="bi bi-truck"></i>
+                                </div>
+                                <span class="step-label">On The Way</span>
+                            </div>
+
+                            <!-- Step 4: Delivered -->
+                            <div class="step-node {% if order.status == 'Delivered' %}completed{% endif %}">
+                                <div class="step-icon">
+                                    <i class="bi bi-house-check-fill"></i>
+                                </div>
+                                <span class="step-label">Delivered</span>
+                            </div>
+                        </div>
+
+                        <!-- Live Rider / Delivery Info Banner -->
+                        {% if order.delivery and order.delivery.partner %}
+                            <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2 text-secondary small">
+                                <div>
+                                    <i class="bi bi-person-badge-fill text-warning me-1"></i> Delivery Driver: 
+                                    <strong class="text-light">{{ order.delivery.partner.name }}</strong>
+                                    <span class="ms-2">📞 {{ order.delivery.partner.phone }}</span>
+                                </div>
+                                <div>
+                                    <span class="badge bg-secondary px-2 py-1">Delivery State: {{ order.delivery.delivery_status }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger my-3 py-2 small border-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-x-octagon-fill fs-5"></i>
+                        <span>This order was cancelled and was not processed by the kitchen.</span>
+                    </div>
+                {% endif %}
+
+                <!-- Order Items Grid -->
+                <div class="py-3">
+                    <h6 class="text-secondary small fw-semibold text-uppercase mb-2">Dishes Ordered</h6>
+                    <div class="row g-2">
+                        {% for order_item in order.items.all %}
+                            <div class="col-12 col-md-6">
+                                <div class="bg-dark p-2 px-3 rounded-3 border border-secondary d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-warning text-dark fw-bold">{{ order_item.quantity }}x</span>
+                                        <div>
+                                            <span class="text-light fw-medium">{{ order_item.item.item_name }}</span>
+                                            <small class="text-secondary d-block">{{ order_item.item.restaurant.restaurant_name }}</small>
+                                        </div>
+                                    </div>
+                                    <span class="text-warning fw-semibold">${{ order_item.item.price }}</span>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-secondary small mb-0">No item details available.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if order.special_instructions %}
+                    <div class="bg-dark p-2 px-3 rounded-3 border border-secondary mb-3 small d-flex align-items-center gap-2">
+                        <i class="bi bi-chat-left-dots text-warning"></i>
+                        <span class="text-secondary">Instructions:</span>
+                        <span class="text-light fw-medium">{{ order.special_instructions }}</span>
+                    </div>
+                {% endif %}
+
+                <!-- Footer / Actions -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 border-top border-secondary">
+                    <div class="d-flex align-items-center gap-3 flex-wrap small text-secondary">
+                        {% if order.payment %}
+                            <span>
+                                <i class="bi bi-credit-card text-warning me-1"></i> Payment Mode: 
+                                <strong class="text-light">{{ order.payment.payment_mode }}</strong> 
+                                <span class="badge {% if order.payment.payment_status == 'Paid' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %} ms-1">
+                                    {{ order.payment.payment_status }}
+                                </span>
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{% url 'order_receipt' order.id %}" class="btn btn-outline-secondary btn-sm fw-semibold">
+                            <i class="bi bi-file-earmark-text me-1 text-warning"></i> Receipt
+                        </a>
+
+                        {% if order.status == 'Delivered' and order.items.exists %}
+                            <button type="button" class="btn btn-warning text-dark btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#reviewModal{{ order.id }}">
+                                <i class="bi bi-star-fill me-1"></i> Review Meal
+                            </button>
+
+                            <!-- Review Modal -->
+                            <div class="modal fade" id="reviewModal{{ order.id }}" tabindex="-1" aria-labelledby="reviewModalLabel{{ order.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content bg-dark text-light border border-secondary">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title fw-bold" id="reviewModalLabel{{ order.id }}">
+                                                ⭐ Rate Your Experience (Order #{{ order.id }})
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form action="{% url 'submit_review' %}" method="post">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="restaurant_id" value="{{ order.items.first.item.restaurant.id }}">
+                                            <input type="hidden" name="menu_item_id" value="{{ order.items.first.item.id }}">
+
+                                            <div class="modal-body">
+                                                <p class="text-secondary small mb-3">
+                                                    How was your meal from <strong>{{ order.items.first.item.restaurant.restaurant_name }}</strong>?
+                                                </p>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label text-light fw-medium small">Rating *</label>
+                                                    <select name="rating" class="form-select bg-dark text-warning border-secondary fw-bold">
+                                                        <option value="5">⭐⭐⭐⭐⭐ 5 Stars - Exceptional</option>
+                                                        <option value="4">⭐⭐⭐⭐ 4 Stars - Very Good</option>
+                                                        <option value="3">⭐⭐⭐ 3 Stars - Average</option>
+                                                        <option value="2">⭐⭐ 2 Stars - Below Expectations</option>
+                                                        <option value="1">⭐ 1 Star - Poor</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-2">
+                                                    <label class="form-label text-light fw-medium small">Your Review & Comments</label>
+                                                    <textarea name="comment" rows="3" class="form-control bg-dark text-light border-secondary" placeholder="Tell us about the flavor, portion size, and delivery speed..."></textarea>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer border-secondary">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-brand btn-sm fw-bold">Submit Review</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Cancel button if eligible -->
+                        {% if order.status in 'Pending,Placed' %}
+                            <form action="{% url 'cancel_order' order.id %}" method="post" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm fw-semibold" onclick="return confirm('Are you sure you want to cancel Order #{{ order.id }}?')">
+                                    <i class="bi bi-x-circle me-1"></i> Cancel Order
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="card card-custom p-5 text-center border-0">
+                <div class="d-inline-flex p-4 rounded-circle bg-dark-subtle text-secondary mx-auto mb-3">
+                    <i class="bi bi-receipt fs-1 text-warning"></i>
+                </div>
+                <h4 class="fw-bold text-light">No Orders Found</h4>
+                <p class="text-secondary mb-4">You haven't placed any food orders yet. Explore our delicious menu to start ordering!</p>
+                <div>
+                    <a href="{% url 'storefront' %}" class="btn btn-brand px-4 py-2 fw-semibold">
+                        <i class="bi bi-fire me-1"></i> Explore Food Menu
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

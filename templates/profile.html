@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile & Account - Food Express{% endblock %}
+
+{% block content %}
+<div class="row my-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 pb-3 border-bottom border-secondary">
+            <div>
+                <h2 class="fw-bold text-light mb-1">
+                    <i class="bi bi-person-gear text-warning me-2"></i>My Profile & Account Settings
+                </h2>
+                <p class="text-secondary small mb-0">Manage your contact details, delivery addresses, and view spending summary</p>
+            </div>
+            <a href="{% url 'order_history' %}" class="btn btn-outline-brand btn-sm">
+                <i class="bi bi-receipt me-1"></i> View Order History
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <!-- Left: User Overview & Stats -->
+            <div class="col-lg-4">
+                <!-- User Card -->
+                <div class="card card-custom p-4 border-0 shadow-sm text-center mb-4">
+                    <div class="d-inline-flex p-3 rounded-circle bg-warning-subtle text-warning mx-auto mb-3">
+                        <i class="bi bi-person-circle fs-1"></i>
+                    </div>
+                    <h4 class="fw-bold text-light mb-1">{{ user.get_full_name|default:user.username }}</h4>
+                    <p class="text-secondary small mb-2">@{{ user.username }}</p>
+                    <div>
+                        {% if user.is_staff %}
+                            <span class="badge bg-warning text-dark px-3 py-1">Administrator / Staff</span>
+                        {% else %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">Customer Member</span>
+                        {% endif %}
+                    </div>
+
+                    <hr class="border-secondary my-3">
+
+                    <small class="text-secondary d-block text-start mb-1">
+                        <i class="bi bi-calendar-event me-1 text-warning"></i> Member Since: {{ user.date_joined|date:"M d, Y" }}
+                    </small>
+                    <small class="text-secondary d-block text-start">
+                        <i class="bi bi-envelope me-1 text-warning"></i> {{ user.email|default:"No email registered" }}
+                    </small>
+                </div>
+
+                <!-- Account Metrics -->
+                <div class="row g-2">
+                    <div class="col-4">
+                        <div class="card card-custom p-2 text-center border-0 shadow-sm">
+                            <span class="fs-4 fw-bold text-light">{{ total_orders }}</span>
+                            <small class="text-secondary" style="font-size: 0.75rem;">Orders</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card card-custom p-2 text-center border-0 shadow-sm">
+                            <span class="fs-4 fw-bold text-success">${{ total_spent }}</span>
+                            <small class="text-secondary" style="font-size: 0.75rem;">Total Spent</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card card-custom p-2 text-center border-0 shadow-sm">
+                            <span class="fs-4 fw-bold text-warning">{{ active_orders }}</span>
+                            <small class="text-secondary" style="font-size: 0.75rem;">Active</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Edit Profile & Address Form -->
+            <div class="col-lg-8">
+                <div class="card card-custom p-4 p-md-5 border-0 shadow-sm">
+                    <h5 class="fw-bold text-light mb-4 pb-2 border-bottom border-secondary">
+                        <i class="bi bi-pencil-square text-warning me-2"></i>Personal & Delivery Information
+                    </h5>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-light fw-medium small">First Name</label>
+                                <input type="text" name="first_name" value="{{ user.first_name }}" class="form-control bg-dark text-light border-secondary" placeholder="First name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-light fw-medium small">Last Name</label>
+                                <input type="text" name="last_name" value="{{ user.last_name }}" class="form-control bg-dark text-light border-secondary" placeholder="Last name">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-light fw-medium small">Email Address</label>
+                                <input type="email" name="email" value="{{ user.email }}" class="form-control bg-dark text-light border-secondary" placeholder="name@example.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-light fw-medium small">Contact Phone Number *</label>
+                                <input type="text" name="phone" value="{{ profile.phone }}" class="form-control bg-dark text-light border-secondary" required placeholder="e.g. +1 555-0199">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-light fw-medium small">Default Delivery Address *</label>
+                            <textarea name="address" rows="3" class="form-control bg-dark text-light border-secondary" required placeholder="Enter street, apartment/suite, city, zip code...">{{ profile.address }}</textarea>
+                            <small class="text-secondary" style="font-size: 0.78rem;">This address will be automatically prefilled at checkout for faster ordering.</small>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="submit" class="btn btn-brand px-4 py-2 fw-bold">
+                                <i class="bi bi-check2-circle me-1"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

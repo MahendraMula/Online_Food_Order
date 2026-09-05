@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+
+{% block title %}Restaurant Operations Dashboard - Food Express{% endblock %}
+
+{% block content %}
+<div class="row my-4">
+    <div class="col-12">
+        <!-- Dashboard Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 pb-3 border-bottom border-secondary">
+            <div>
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1 mb-1">
+                    <i class="bi bi-shield-lock-fill me-1"></i> Management Console
+                </span>
+                <h2 class="fw-bold text-light mb-0">Restaurant Operations & Analytics</h2>
+                <p class="text-secondary small mb-0">Live order processing, real-time dispatch, and menu inventory controls</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/admin/" class="btn btn-outline-secondary btn-sm fw-semibold">
+                    <i class="bi bi-database-gear me-1"></i> Django Database Admin
+                </a>
+                <a href="{% url 'storefront' %}" class="btn btn-outline-brand btn-sm fw-semibold">
+                    <i class="bi bi-eye me-1"></i> View Live Storefront
+                </a>
+            </div>
+        </div>
+
+        <!-- KPI Metrics Overview Grid -->
+        <div class="row g-3 mb-4">
+            <!-- Total Revenue -->
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="card card-custom p-3 border-0 shadow-sm h-100">
+                    <small class="text-secondary fw-semibold">Total Revenue</small>
+                    <h3 class="fw-bold text-success mt-1 mb-0">${{ total_revenue }}</h3>
+                    <small class="text-secondary" style="font-size: 0.75rem;">Lifetime Gross</small>
+                </div>
+            </div>
+
+            <!-- Total Orders -->
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="card card-custom p-3 border-0 shadow-sm h-100">
+                    <small class="text-secondary fw-semibold">Total Orders</small>
+                    <h3 class="fw-bold text-light mt-1 mb-0">{{ total_orders }}</h3>
+                    <small class="text-secondary" style="font-size: 0.75rem;">All-time orders</small>
+                </div>
+            </div>
+
+            <!-- Active Queue -->
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="card card-custom p-3 border-0 shadow-sm h-100 border-start border-warning border-3">
+                    <small class="text-warning fw-semibold">Active Queue</small>
+                    <h3 class="fw-bold text-warning mt-1 mb-0">{{ active_orders_count }}</h3>
+                    <small class="text-secondary" style="font-size: 0.75rem;">Needs fulfillment</small>
+                </div>
+            </div>
+
+            <!-- Delivered -->
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="card card-custom p-3 border-0 shadow-sm h-100 border-start border-success border-3">
+                    <small class="text-success fw-semibold">Delivered</small>
+                    <h3 class="fw-bold text-success mt-1 mb-0">{{ delivered_orders_count }}</h3>
+                    <small class="text-secondary" style="font-size: 0.75rem;">Successfully fulfilled</small>
+                </div>
+            </div>
+
+            <!-- Menu Inventory -->
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="card card-custom p-3 border-0 shadow-sm h-100">
+                    <small class="text-secondary fw-semibold">Active Menu</small>
+                    <h3 class="fw-bold text-light mt-1 mb-0">{{ available_dishes }}/{{ total_dishes }}</h3>
+                    <small class="text-secondary" style="font-size: 0.75rem;">Dishes in stock</small>
+                </div>
+            </div>
+
+            <!-- Customers -->
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="card card-custom p-3 border-0 shadow-sm h-100">
+                    <small class="text-secondary fw-semibold">Customers</small>
+                    <h3 class="fw-bold text-light mt-1 mb-0">{{ total_customers }}</h3>
+                    <small class="text-secondary" style="font-size: 0.75rem;">Registered users</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills mb-4 gap-2" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="btn btn-dark active border-secondary text-light fw-semibold" id="orders-tab" data-bs-toggle="pill" data-bs-target="#orders-pane" type="button" role="tab">
+                    <i class="bi bi-receipt-cutoff me-1 text-warning"></i> Orders Queue ({{ orders|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="btn btn-dark border-secondary text-light fw-semibold" id="menu-tab" data-bs-toggle="pill" data-bs-target="#menu-pane" type="button" role="tab">
+                    <i class="bi bi-egg-fried me-1 text-warning"></i> Menu Stock ({{ menu_items|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="btn btn-dark border-secondary text-light fw-semibold" id="drivers-tab" data-bs-toggle="pill" data-bs-target="#drivers-pane" type="button" role="tab">
+                    <i class="bi bi-truck me-1 text-warning"></i> Delivery Riders ({{ drivers|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="btn btn-dark border-secondary text-light fw-semibold" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#analytics-pane" type="button" role="tab">
+                    <i class="bi bi-bar-chart-fill me-1 text-warning"></i> Sales Analytics
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content Panes -->
+        <div class="tab-content" id="dashboardTabsContent">
+            
+            <!-- TAB 1: ORDERS QUEUE -->
+            <div class="tab-pane fade show active" id="orders-pane" role="tabpanel">
+                <div class="card card-custom border-0 shadow-sm p-3 p-md-4">
+                    <h5 class="fw-bold text-light mb-3">Live Orders & Kitchen Processing</h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle mb-0">
+                            <thead>
+                                <tr class="text-secondary small">
+                                    <th>Order</th>
+                                    <th>Customer & Address</th>
+                                    <th>Dishes Ordered</th>
+                                    <th>Total & Payment</th>
+                                    <th>Current Status</th>
+                                    <th>Rider Dispatch</th>
+                                    <th>Update Workflow</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                    <tr>
+                                        <!-- Order ID & Time -->
+                                        <td>
+                                            <a href="{% url 'order_receipt' order.id %}" class="fw-bold text-warning text-decoration-none" title="View Printable Invoice">
+                                                #{{ order.id }} <i class="bi bi-file-earmark-text" style="font-size: 0.8rem;"></i>
+                                            </a>
+                                            <small class="text-secondary d-block" style="font-size: 0.75rem;">{{ order.order_date|date:"M d, h:i A" }}</small>
+                                        </td>
+
+                                        <!-- Customer Details -->
+                                        <td>
+                                            <strong class="text-light">{{ order.customer.username }}</strong>
+                                            {% if order.customer.profile.phone %}
+                                                <small class="text-secondary d-block">📞 {{ order.customer.profile.phone }}</small>
+                                            {% endif %}
+                                            {% if order.customer.profile.address %}
+                                                <small class="text-secondary d-block text-truncate" style="max-width: 150px;" title="{{ order.customer.profile.address }}">
+                                                    📍 {{ order.customer.profile.address }}
+                                                </small>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- Dishes -->
+                                        <td>
+                                            <div class="d-flex flex-column gap-1 small">
+                                                {% for oi in order.items.all %}
+                                                    <span class="text-light">
+                                                        <strong class="text-warning">{{ oi.quantity }}x</strong> {{ oi.item.item_name }}
+                                                    </span>
+                                                {% empty %}
+                                                    <span class="text-secondary">No items</span>
+                                                {% endfor %}
+                                                {% if order.special_instructions %}
+                                                    <small class="text-warning fst-italic mt-1" style="font-size: 0.75rem;">
+                                                        📝 Note: {{ order.special_instructions }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+
+                                        <!-- Total & Payment -->
+                                        <td>
+                                            <span class="fw-bold text-warning">${{ order.total_amount }}</span>
+                                            <small class="text-secondary d-block">
+                                                {{ order.payment.payment_mode }} ({{ order.payment.payment_status }})
+                                            </small>
+                                        </td>
+
+                                        <!-- Current Status Badge -->
+                                        <td>
+                                            {% if order.status == 'Pending' %}
+                                                <span class="badge badge-status-pending px-2 py-1">Pending</span>
+                                            {% elif order.status == 'Placed' %}
+                                                <span class="badge badge-status-placed px-2 py-1">Placed</span>
+                                            {% elif order.status == 'Preparing' %}
+                                                <span class="badge badge-status-preparing px-2 py-1">Preparing</span>
+                                            {% elif order.status == 'Out for Delivery' %}
+                                                <span class="badge badge-status-delivery px-2 py-1">On Way</span>
+                                            {% elif order.status == 'Delivered' %}
+                                                <span class="badge badge-status-delivered px-2 py-1">Delivered</span>
+                                            {% elif order.status == 'Cancelled' %}
+                                                <span class="badge badge-status-cancelled px-2 py-1">Cancelled</span>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- Rider Assignment Form -->
+                                        <form action="{% url 'update_order_status' order.id %}" method="post">
+                                            {% csrf_token %}
+                                            <td>
+                                                <select name="driver_id" class="form-select form-select-sm bg-dark text-light border-secondary" style="min-width: 130px;">
+                                                    <option value="">-- Assign Rider --</option>
+                                                    {% for d in drivers %}
+                                                        <option value="{{ d.id }}" {% if order.delivery and order.delivery.partner_id == d.id %}selected{% endif %}>
+                                                            {{ d.name }}
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </td>
+
+                                            <!-- Status Update Dropdown & Submit -->
+                                            <td>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <select name="status" class="form-select form-select-sm bg-dark text-light border-secondary" style="min-width: 120px;">
+                                                        {% for val, label in status_choices %}
+                                                            <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <button type="submit" class="btn btn-brand btn-sm" title="Apply Status Change">
+                                                        <i class="bi bi-check2"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </form>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center text-secondary py-4">
+                                            No customer orders placed yet.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: MENU STOCK INVENTORY -->
+            <div class="tab-pane fade" id="menu-pane" role="tabpanel">
+                <div class="card card-custom border-0 shadow-sm p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-light mb-0">Menu Dishes & Live Stock Toggle</h5>
+                        <a href="/admin/restaurants/menuitem/add/" class="btn btn-brand btn-sm">
+                            <i class="bi bi-plus-circle me-1"></i> Add New Dish
+                        </a>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle mb-0">
+                            <thead>
+                                <tr class="text-secondary small">
+                                    <th>Dish</th>
+                                    <th>Restaurant</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Prep Time</th>
+                                    <th>Diet Type</th>
+                                    <th>Stock Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in menu_items %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                {% if item.image_url %}
+                                                    <img src="{{ item.image_url }}" alt="{{ item.item_name }}" class="rounded-2" style="width: 45px; height: 45px; object-fit: cover;">
+                                                {% endif %}
+                                                <div>
+                                                    <span class="fw-bold text-light">{{ item.item_name }}</span>
+                                                    <small class="text-secondary d-block text-truncate" style="max-width: 200px;">{{ item.description }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span class="text-warning small">{{ item.restaurant.restaurant_name }}</span></td>
+                                        <td><span class="badge bg-secondary">{{ item.category.name|default:"General" }}</span></td>
+                                        <td><span class="fw-bold text-light">${{ item.price }}</span></td>
+                                        <td><small class="text-secondary">{{ item.preparation_time }} mins</small></td>
+                                        <td>
+                                            {% if item.is_veg %}
+                                                <span class="badge badge-veg">🟢 Veg</span>
+                                            {% else %}
+                                                <span class="badge badge-nonveg">🔴 Non-Veg</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.availability %}
+                                                <span class="badge bg-success-subtle text-success">● In Stock</span>
+                                            {% else %}
+                                                <span class="badge bg-danger-subtle text-danger">○ Sold Out</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <form action="{% url 'toggle_item_availability' item.id %}" method="post" class="d-inline m-0">
+                                                {% csrf_token %}
+                                                {% if item.availability %}
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-2" title="Mark as Sold Out">
+                                                        <i class="bi bi-slash-circle me-1"></i> Out of Stock
+                                                    </button>
+                                                {% else %}
+                                                    <button type="submit" class="btn btn-outline-success btn-sm py-1 px-2" title="Mark as In Stock">
+                                                        <i class="bi bi-check-circle me-1"></i> In Stock
+                                                    </button>
+                                                {% endif %}
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="8" class="text-center text-secondary py-4">No menu dishes created yet.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DELIVERY RIDERS & LOGISTICS -->
+            <div class="tab-pane fade" id="drivers-pane" role="tabpanel">
+                <div class="row g-4">
+                    <!-- Drivers List -->
+                    <div class="col-lg-8">
+                        <div class="card card-custom border-0 shadow-sm p-3 p-md-4">
+                            <h5 class="fw-bold text-light mb-3">Onboarded Delivery Drivers</h5>
+
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr class="text-secondary small">
+                                            <th>#</th>
+                                            <th>Driver Name</th>
+                                            <th>Contact Phone</th>
+                                            <th>Assigned Deliveries</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for driver in drivers %}
+                                            <tr>
+                                                <td>{{ driver.id }}</td>
+                                                <td>
+                                                    <strong class="text-light">{{ driver.name }}</strong>
+                                                </td>
+                                                <td>
+                                                    <span class="text-warning">📞 {{ driver.phone }}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-dark-subtle border border-secondary text-light px-2 py-1">
+                                                        {{ driver.deliveries.count }} Deliveries
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        {% empty %}
+                                            <tr>
+                                                <td colspan="4" class="text-center text-secondary py-4">
+                                                    No delivery drivers registered yet. Add drivers using the form on the right.
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Driver Form -->
+                    <div class="col-lg-4">
+                        <div class="card card-custom border-0 shadow-sm p-4">
+                            <h5 class="fw-bold text-light mb-3 pb-2 border-bottom border-secondary">
+                                <i class="bi bi-person-plus-fill text-warning me-2"></i>Add Delivery Partner
+                            </h5>
+
+                            <form action="{% url 'add_delivery_partner' %}" method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label class="form-label text-light fw-medium small">Driver Full Name *</label>
+                                    <input type="text" name="name" class="form-control bg-dark text-light border-secondary" required placeholder="e.g. Alex Johnson">
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label text-light fw-medium small">Phone Number *</label>
+                                    <input type="text" name="phone" class="form-control bg-dark text-light border-secondary" required placeholder="e.g. +1 555-0248">
+                                </div>
+
+                                <button type="submit" class="btn btn-brand w-100 py-2 fw-bold">
+                                    <i class="bi bi-plus-circle me-1"></i> Register Driver
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: SALES ANALYTICS -->
+            <div class="tab-pane fade" id="analytics-pane" role="tabpanel">
+                <div class="row g-4">
+
+                    <!-- Category Revenue Breakdown -->
+                    <div class="col-12 col-lg-6">
+                        <div class="card card-custom border-0 shadow-sm p-4 h-100">
+                            <h5 class="fw-bold text-light mb-1">
+                                <i class="bi bi-tag-fill text-warning me-2"></i>Revenue by Category
+                            </h5>
+                            <p class="text-secondary small mb-3">Gross revenue contribution from each food category</p>
+                            {% if category_sales %}
+                                {% for cat in category_sales %}
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1 small">
+                                            <span class="text-light fw-semibold">
+                                                <i class="bi {{ cat.icon }} text-warning me-1"></i>{{ cat.name }}
+                                            </span>
+                                            <span class="text-warning fw-bold">${{ cat.revenue }}</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px; background-color: #2d323f;">
+                                            <div class="progress-bar bg-warning" role="progressbar"
+                                                style="width: {% if total_revenue and cat.revenue %}{{ cat.revenue|floatformat:2 }}{% else %}0{% endif %}%;"
+                                                aria-valuenow="{{ cat.revenue }}" aria-valuemin="0" aria-valuemax="{{ total_revenue }}">
+                                            </div>
+                                        </div>
+                                        <small class="text-secondary" style="font-size: 0.72rem;">{{ cat.dish_count }} dishes in this category</small>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4 text-secondary">
+                                    <i class="bi bi-bar-chart fs-2 d-block mb-2 text-warning"></i>
+                                    No order data yet. Category analytics will appear as orders arrive.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Payment Method Distribution -->
+                    <div class="col-12 col-lg-6">
+                        <div class="card card-custom border-0 shadow-sm p-4 h-100">
+                            <h5 class="fw-bold text-light mb-1">
+                                <i class="bi bi-credit-card-2-front-fill text-warning me-2"></i>Payment Methods
+                            </h5>
+                            <p class="text-secondary small mb-3">Transaction and revenue split by payment mode</p>
+                            {% if payment_stats %}
+                                {% for p in payment_stats %}
+                                    <div class="bg-dark rounded-3 p-3 border border-secondary mb-3 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="fw-bold text-light">
+                                                {% if p.payment_mode == 'COD' %}💵{% elif p.payment_mode == 'UPI' %}📱{% else %}💳{% endif %}
+                                                {{ p.payment_mode }}
+                                            </span>
+                                            <small class="text-secondary d-block">{{ p.tx_count }} transaction{{ p.tx_count|pluralize }}</small>
+                                        </div>
+                                        <span class="fw-bold text-warning fs-5">${{ p.total_amount }}</span>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4 text-secondary">
+                                    <i class="bi bi-credit-card fs-2 d-block mb-2 text-warning"></i>
+                                    No payment data available yet.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Top Selling Dishes Leaderboard -->
+                    <div class="col-12">
+                        <div class="card card-custom border-0 shadow-sm p-4">
+                            <h5 class="fw-bold text-light mb-1">
+                                <i class="bi bi-trophy-fill text-warning me-2"></i>Top Selling Dishes
+                            </h5>
+                            <p class="text-secondary small mb-3">Dishes ranked by total quantity sold across all fulfilled orders</p>
+                            {% if top_selling_dishes %}
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-hover align-middle mb-0">
+                                        <thead>
+                                            <tr class="text-secondary small">
+                                                <th>Rank</th>
+                                                <th>Dish Name</th>
+                                                <th>Category</th>
+                                                <th>Restaurant</th>
+                                                <th>Unit Price</th>
+                                                <th>Total Qty Sold</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in top_selling_dishes %}
+                                                <tr>
+                                                    <td>
+                                                        {% if forloop.counter == 1 %}
+                                                            <span class="badge bg-warning text-dark fw-bold">🥇 #1</span>
+                                                        {% elif forloop.counter == 2 %}
+                                                            <span class="badge bg-secondary text-light fw-bold">🥈 #2</span>
+                                                        {% elif forloop.counter == 3 %}
+                                                            <span class="badge" style="background-color: #cd7f32; color: white; font-weight: 600;">🥉 #3</span>
+                                                        {% else %}
+                                                            <span class="text-secondary fw-bold">#{{ forloop.counter }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td><span class="fw-bold text-light">{{ item.item_name }}</span></td>
+                                                    <td><span class="badge bg-secondary">{{ item.category.name|default:"—" }}</span></td>
+                                                    <td><span class="text-warning small">{{ item.restaurant.restaurant_name }}</span></td>
+                                                    <td><span class="fw-bold text-light">${{ item.price }}</span></td>
+                                                    <td>
+                                                        <span class="badge bg-success-subtle text-success px-3 py-1 fw-bold">
+                                                            {{ item.total_sold }} units
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4 text-secondary">
+                                    <i class="bi bi-trophy fs-2 d-block mb-2 text-warning"></i>
+                                    Sales leaderboard will appear as orders are fulfilled.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- TAB 4: SALES ANALYTICS -->
+<script>
+document.getElementById('analytics-tab') && document.getElementById('analytics-tab').addEventListener('show.bs.tab', function() {});
+</script>
+{% endblock %}

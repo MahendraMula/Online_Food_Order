@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoice Receipt #{{ order.id }} - Food Express{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-card {
+        background-color: var(--surface-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 16px;
+        max-width: 750px;
+        margin: 0 auto;
+    }
+    @media print {
+        body {
+            background-color: #fff !important;
+            color: #000 !important;
+        }
+        .navbar, footer, .no-print {
+            display: none !important;
+        }
+        .receipt-card {
+            border: 1px solid #ddd !important;
+            background-color: #fff !important;
+            color: #000 !important;
+            box-shadow: none !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+        }
+        .text-light {
+            color: #000 !important;
+        }
+        .text-secondary {
+            color: #555 !important;
+        }
+        .table {
+            color: #000 !important;
+        }
+        .table-dark {
+            background-color: transparent !important;
+            color: #000 !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="my-4">
+    <!-- Top Action Bar (hidden on print) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print flex-wrap gap-2" style="max-width: 750px; margin: 0 auto;">
+        <a href="{% url 'order_history' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Orders
+        </a>
+        <button onclick="window.print()" class="btn btn-brand btn-sm px-3 fw-bold">
+            <i class="bi bi-printer-fill me-1"></i> Print / Save PDF
+        </button>
+    </div>
+
+    <!-- Receipt Container -->
+    <div class="card receipt-card p-4 p-md-5 shadow-lg">
+        <!-- Receipt Header -->
+        <div class="d-flex justify-content-between align-items-start pb-4 border-bottom border-secondary flex-wrap gap-3">
+            <div>
+                <h3 class="fw-bold text-warning mb-1">
+                    <i class="bi bi-fire me-1"></i> Food Express
+                </h3>
+                <p class="text-secondary small mb-0">Official Electronic Order Receipt</p>
+                <small class="text-light fw-semibold">Kitchen: {{ restaurant_name }}</small>
+            </div>
+            <div class="text-md-end">
+                <span class="badge bg-secondary-subtle text-light border border-secondary px-3 py-1 fs-6 mb-1">
+                    INVOICE #{{ order.id }}
+                </span>
+                <p class="text-secondary small mb-0">Date: {{ order.order_date|date:"F d, Y • h:i A" }}</p>
+                <span class="badge {% if order.status == 'Delivered' %}bg-success{% elif order.status == 'Cancelled' %}bg-danger{% else %}bg-warning text-dark{% endif %} px-2 py-1 small">
+                    Status: {{ order.status }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Customer & Delivery Details -->
+        <div class="row g-3 py-3 my-2 bg-dark rounded-3 border border-secondary">
+            <div class="col-md-6">
+                <small class="text-secondary d-block fw-semibold text-uppercase" style="font-size: 0.75rem;">Customer Details</small>
+                <strong class="text-light d-block">{{ order.customer.get_full_name|default:order.customer.username }}</strong>
+                <small class="text-secondary d-block">{{ order.customer.email }}</small>
+                {% if order.customer.profile.phone %}
+                    <small class="text-secondary d-block">📞 {{ order.customer.profile.phone }}</small>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <small class="text-secondary d-block fw-semibold text-uppercase" style="font-size: 0.75rem;">Delivery Destination</small>
+                <small class="text-light d-block">{{ order.customer.profile.address|default:"Standard Delivery Address" }}</small>
+                <small class="text-secondary d-block mt-1">
+                    Payment Method: <strong class="text-warning">{{ order.payment.payment_mode }}</strong> 
+                    ({{ order.payment.payment_status }})
+                </small>
+            </div>
+        </div>
+
+        <!-- Special Cooking Instructions if any -->
+        {% if order.special_instructions %}
+            <div class="alert alert-dark border-secondary py-2 small mb-3">
+                <strong class="text-warning"><i class="bi bi-chat-left-text-fill me-1"></i> Special Instructions:</strong>
+                <span class="text-light">{{ order.special_instructions }}</span>
+            </div>
+        {% endif %}
+
+        <!-- Itemized Table -->
+        <div class="table-responsive my-3">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-secondary small border-bottom border-secondary">
+                        <th>Dish / Item Description</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-end">Unit Price</th>
+                        <th class="text-end">Line Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in items_with_totals %}
+                        <tr>
+                            <td>
+                                <strong class="text-light">{{ row.item.item_name }}</strong>
+                                <small class="text-secondary d-block">{{ row.item.restaurant.restaurant_name }}</small>
+                            </td>
+                            <td class="text-center font-monospace">{{ row.quantity }}</td>
+                            <td class="text-end">${{ row.unit_price }}</td>
+                            <td class="text-end fw-semibold text-light">${{ row.line_total }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Calculations Breakdown -->
+        <div class="row justify-content-end mt-3">
+            <div class="col-md-6">
+                <div class="d-flex justify-content-between text-secondary py-1 small">
+                    <span>Item Subtotal:</span>
+                    <span class="text-light">${{ order.total_amount }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-secondary py-1 small">
+                    <span>Delivery Charge:</span>
+                    <span class="text-success fw-bold">FREE</span>
+                </div>
+                <div class="d-flex justify-content-between text-secondary py-1 small">
+                    <span>Estimated Tax (0%):</span>
+                    <span class="text-light">$0.00</span>
+                </div>
+                <hr class="border-secondary my-2">
+                <div class="d-flex justify-content-between align-items-center pt-1">
+                    <span class="fs-5 fw-bold text-light">Total Paid:</span>
+                    <span class="fs-4 fw-bolder text-warning">${{ order.total_amount }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Receipt Footer Note -->
+        <div class="mt-4 pt-3 border-top border-secondary text-center">
+            <small class="text-secondary d-block">Thank you for dining with Food Express! 🍕</small>
+            <small class="text-secondary" style="font-size: 0.75rem;">This is a computer-generated tax invoice and requires no physical signature.</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

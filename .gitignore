@@ -1,0 +1,76 @@
+# ============================================================
+#  OFO-DBMS — .gitignore
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# --- Django ---
+*.log
+*.pot
+local_settings.py
+
+# --- Project Databases (SQLite) ---
+# These contain data and should NOT be committed.
+# Use migrations + seed data scripts instead.
+*.db
+*.sqlite3
+
+# --- Environment & Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Media / User Uploads ---
+/images/
+/media/
+/static/collected/
+
+# --- Collected Static Files (after collectstatic) ---
+staticfiles/
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# --- OS Generated ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# --- Coverage & Testing ---
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+nosetests.xml
+test-results/
