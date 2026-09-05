@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 🍔 OFO-DBMS
 ### Online Food Ordering System
@@ -9,7 +9,6 @@ A full-stack web application built with **Python · Django · SQLite** demonstra
 [![Django](https://img.shields.io/badge/Django-5.x-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)](https://sqlite.org/)
 [![Bootstrap](https://img.shields.io/badge/Frontend-Bootstrap%205-7952B3?logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 </div>
 
@@ -26,7 +25,6 @@ A full-stack web application built with **Python · Django · SQLite** demonstra
 - [Running Tests](#-running-tests)
 - [URL Endpoints](#-url-endpoints)
 - [Contributing](#-contributing)
-- [License](#-license)
 
 ---
 
@@ -276,12 +274,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) to get
 
 ---
 
-## 📜 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
 <div align="center">
 Made with ❤️ as an academic DBMS project
 </div>
+
