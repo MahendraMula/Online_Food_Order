@@ -30,7 +30,7 @@
             <div class="col-6 col-md-4 col-xl-2">
                 <div class="card card-custom p-3 border-0 shadow-sm h-100">
                     <small class="text-secondary fw-semibold">Total Revenue</small>
-                    <h3 class="fw-bold text-success mt-1 mb-0">${{ total_revenue }}</h3>
+                    <h3 class="fw-bold text-success mt-1 mb-0">{{ currency_symbol }}{{ total_revenue }}</h3>
                     <small class="text-secondary" style="font-size: 0.75rem;">Lifetime Gross</small>
                 </div>
             </div>
@@ -170,7 +170,7 @@
 
                                         <!-- Total & Payment -->
                                         <td>
-                                            <span class="fw-bold text-warning">${{ order.total_amount }}</span>
+                                            <span class="fw-bold text-warning">{{ currency_symbol }}{{ order.total_amount }}</span>
                                             <small class="text-secondary d-block">
                                                 {{ order.payment.payment_mode }} ({{ order.payment.payment_status }})
                                             </small>
@@ -275,7 +275,7 @@
                                         </td>
                                         <td><span class="text-warning small">{{ item.restaurant.restaurant_name }}</span></td>
                                         <td><span class="badge bg-secondary">{{ item.category.name|default:"General" }}</span></td>
-                                        <td><span class="fw-bold text-light">${{ item.price }}</span></td>
+                                        <td><span class="fw-bold text-light">{{ currency_symbol }}{{ item.price }}</span></td>
                                         <td><small class="text-secondary">{{ item.preparation_time }} mins</small></td>
                                         <td>
                                             {% if item.is_veg %}
@@ -409,7 +409,7 @@
                                             <span class="text-light fw-semibold">
                                                 <i class="bi {{ cat.icon }} text-warning me-1"></i>{{ cat.name }}
                                             </span>
-                                            <span class="text-warning fw-bold">${{ cat.revenue }}</span>
+                                            <span class="text-warning fw-bold">{{ currency_symbol }}{{ cat.revenue }}</span>
                                         </div>
                                         <div class="progress" style="height: 8px; background-color: #2d323f;">
                                             <div class="progress-bar bg-warning" role="progressbar"
@@ -446,7 +446,7 @@
                                             </span>
                                             <small class="text-secondary d-block">{{ p.tx_count }} transaction{{ p.tx_count|pluralize }}</small>
                                         </div>
-                                        <span class="fw-bold text-warning fs-5">${{ p.total_amount }}</span>
+                                        <span class="fw-bold text-warning fs-5">{{ currency_symbol }}{{ p.total_amount }}</span>
                                     </div>
                                 {% endfor %}
                             {% else %}
@@ -495,7 +495,7 @@
                                                     <td><span class="fw-bold text-light">{{ item.item_name }}</span></td>
                                                     <td><span class="badge bg-secondary">{{ item.category.name|default:"—" }}</span></td>
                                                     <td><span class="text-warning small">{{ item.restaurant.restaurant_name }}</span></td>
-                                                    <td><span class="fw-bold text-light">${{ item.price }}</span></td>
+                                                    <td><span class="fw-bold text-light">{{ currency_symbol }}{{ item.price }}</span></td>
                                                     <td>
                                                         <span class="badge bg-success-subtle text-success px-3 py-1 fw-bold">
                                                             {{ item.total_sold }} units

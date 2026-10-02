@@ -17,6 +17,16 @@
             </a>
         </div>
 
+        <!-- Hidden coupon forms to prevent nested form invalidity -->
+        <form id="couponApplyForm" action="{% url 'apply_coupon' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="checkout">
+        </form>
+        <form id="couponRemoveForm" action="{% url 'remove_coupon' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="checkout">
+        </form>
+
         <form action="{% url 'place_order' %}" method="post">
             {% csrf_token %}
             <div class="row g-4">
@@ -123,25 +133,60 @@
                                         <span class="text-light fw-medium">{{ entry.quantity }}x {{ entry.item.item_name }}</span>
                                         <small class="text-secondary d-block">{{ entry.item.restaurant.restaurant_name }}</small>
                                     </div>
-                                    <span class="text-warning fw-semibold">${{ entry.total_price }}</span>
+                                    <span class="text-warning fw-semibold">{{ currency_symbol }}{{ entry.total_price }}</span>
                                 </div>
                             {% endfor %}
                         </div>
 
-                        <hr class="border-secondary my-2">
+                        <!-- Promo Code Section -->
+                        <div class="mb-3 pb-3 border-top border-bottom border-secondary pt-2">
+                            <label class="form-label text-light small fw-semibold mb-2">
+                                <i class="bi bi-tag-fill text-warning me-1"></i> Promo / Coupon Code
+                            </label>
+                            {% if coupon %}
+                                <div class="d-flex align-items-center justify-content-between p-2 rounded bg-dark border border-success">
+                                    <div>
+                                        <span class="badge bg-success me-1">{{ coupon.code }}</span>
+                                        <small class="text-success fw-semibold">-{{ currency_symbol }}{{ discount_amount }} Applied</small>
+                                    </div>
+                                    <button type="submit" form="couponRemoveForm" class="btn btn-outline-danger btn-sm py-0 px-2" title="Remove Coupon">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            {% else %}
+                                <div class="input-group input-group-sm">
+                                    <input type="text" name="coupon_code" form="couponApplyForm" class="form-control bg-dark text-light border-secondary text-uppercase fw-bold" placeholder="e.g. WELCOME10" required>
+                                    <button class="btn btn-outline-warning fw-semibold px-3" type="submit" form="couponApplyForm">Apply</button>
+                                </div>
+                            {% endif %}
+                        </div>
 
                         <div class="d-flex justify-content-between text-secondary py-1">
                             <span>Subtotal</span>
-                            <span class="text-light fw-medium">${{ total_price }}</span>
+                            <span class="text-light fw-medium">{{ currency_symbol }}{{ subtotal }}</span>
+                        </div>
+                        {% if coupon and discount_amount > 0 %}
+                            <div class="d-flex justify-content-between text-success py-1">
+                                <span>Coupon Discount ({{ coupon.code }})</span>
+                                <span class="fw-bold">-{{ currency_symbol }}{{ discount_amount }}</span>
+                            </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between text-secondary py-1">
+                            <span>Delivery Fee</span>
+                            {% if delivery_fee > 0 %}
+                                <span class="text-light fw-medium">{{ currency_symbol }}{{ delivery_fee }}</span>
+                            {% else %}
+                                <span class="text-success fw-bold">FREE</span>
+                            {% endif %}
                         </div>
                         <div class="d-flex justify-content-between text-secondary py-1">
-                            <span>Standard Delivery</span>
-                            <span class="text-success fw-bold">FREE</span>
+                            <span>GST / Tax ({{ gst_rate_pct }}%)</span>
+                            <span class="text-light fw-medium">{{ currency_symbol }}{{ tax_amount }}</span>
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center pt-3 mt-2 border-top border-secondary mb-4">
                             <span class="fs-5 fw-bold text-light">Grand Total:</span>
-                            <span class="fs-3 fw-bolder text-warning">${{ total_price }}</span>
+                            <span class="fs-3 fw-bolder text-warning">{{ currency_symbol }}{{ total_price }}</span>
                         </div>
 
                         <button type="submit" class="btn btn-brand w-100 py-3 fw-bold fs-6 shadow-sm">

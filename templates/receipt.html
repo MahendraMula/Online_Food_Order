@@ -125,8 +125,8 @@
                                 <small class="text-secondary d-block">{{ row.item.restaurant.restaurant_name }}</small>
                             </td>
                             <td class="text-center font-monospace">{{ row.quantity }}</td>
-                            <td class="text-end">${{ row.unit_price }}</td>
-                            <td class="text-end fw-semibold text-light">${{ row.line_total }}</td>
+                            <td class="text-end">{{ currency_symbol }}{{ row.unit_price }}</td>
+                            <td class="text-end fw-semibold text-light">{{ currency_symbol }}{{ row.line_total }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -138,20 +138,30 @@
             <div class="col-md-6">
                 <div class="d-flex justify-content-between text-secondary py-1 small">
                     <span>Item Subtotal:</span>
-                    <span class="text-light">${{ order.total_amount }}</span>
+                    <span class="text-light">{{ currency_symbol }}{{ order_subtotal }}</span>
                 </div>
+                {% if order.discount_amount > 0 %}
+                    <div class="d-flex justify-content-between text-success py-1 small">
+                        <span>Coupon Discount {% if order.coupon %}({{ order.coupon.code }}){% endif %}:</span>
+                        <span class="fw-bold">-{{ currency_symbol }}{{ order.discount_amount }}</span>
+                    </div>
+                {% endif %}
                 <div class="d-flex justify-content-between text-secondary py-1 small">
                     <span>Delivery Charge:</span>
-                    <span class="text-success fw-bold">FREE</span>
+                    {% if order.delivery_fee > 0 %}
+                        <span class="text-light fw-semibold">{{ currency_symbol }}{{ order.delivery_fee }}</span>
+                    {% else %}
+                        <span class="text-success fw-bold">FREE</span>
+                    {% endif %}
                 </div>
                 <div class="d-flex justify-content-between text-secondary py-1 small">
-                    <span>Estimated Tax (0%):</span>
-                    <span class="text-light">$0.00</span>
+                    <span>GST / Tax ({{ gst_rate_pct|default:"5" }}%):</span>
+                    <span class="text-light fw-semibold">{{ currency_symbol }}{{ order.tax_amount }}</span>
                 </div>
                 <hr class="border-secondary my-2">
                 <div class="d-flex justify-content-between align-items-center pt-1">
                     <span class="fs-5 fw-bold text-light">Total Paid:</span>
-                    <span class="fs-4 fw-bolder text-warning">${{ order.total_amount }}</span>
+                    <span class="fs-4 fw-bolder text-warning">{{ currency_symbol }}{{ order.total_amount }}</span>
                 </div>
             </div>
         </div>

@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -100,3 +101,12 @@ else:
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+
+# Commercial Essentials: Currency, Delivery & Tax Settings
+OFO_CURRENCY_SYMBOL = os.environ.get('OFO_CURRENCY_SYMBOL', '₹')
+OFO_CURRENCY_CODE = os.environ.get('OFO_CURRENCY_CODE', 'INR')
+OFO_BASE_DELIVERY_FEE = Decimal(os.environ.get('OFO_BASE_DELIVERY_FEE', '4.00'))
+OFO_FREE_DELIVERY_THRESHOLD = Decimal(os.environ.get('OFO_FREE_DELIVERY_THRESHOLD', '50.00'))
+OFO_DELIVERY_PER_KM_RATE = Decimal(os.environ.get('OFO_DELIVERY_PER_KM_RATE', '1.00'))
+OFO_BASE_DELIVERY_DISTANCE_KM = Decimal(os.environ.get('OFO_BASE_DELIVERY_DISTANCE_KM', '5.0'))
+OFO_GST_TAX_RATE = Decimal(os.environ.get('OFO_GST_TAX_RATE', '0.05'))  # Configurable 5% default GST assumption

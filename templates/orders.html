@@ -127,7 +127,7 @@
 
                     <div class="text-end">
                         <small class="text-secondary d-block">Grand Total</small>
-                        <span class="fs-4 fw-bolder text-warning">${{ order.total_amount }}</span>
+                        <span class="fs-4 fw-bolder text-warning">{{ currency_symbol }}{{ order.total_amount }}</span>
                     </div>
                 </div>
 
@@ -212,7 +212,7 @@
                                             <small class="text-secondary d-block">{{ order_item.item.restaurant.restaurant_name }}</small>
                                         </div>
                                     </div>
-                                    <span class="text-warning fw-semibold">${{ order_item.item.price }}</span>
+                                    <span class="text-warning fw-semibold">{{ currency_symbol }}{{ order_item.item.price }}</span>
                                 </div>
                             </div>
                         {% empty %}

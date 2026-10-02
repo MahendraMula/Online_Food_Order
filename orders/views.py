@@ -10,14 +10,15 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 
 from restaurants.models import MenuItem, Category, Restaurant
-from .models import Order, OrderItem, Payment, Delivery, DeliveryPartner
-from .cart import Cart
+from .models import Order, OrderItem, Payment, Delivery, DeliveryPartner, Coupon
+from .cart import Cart, MixedRestaurantCartError
+from .services import calculate_delivery_fee, calculate_tax, get_gst_rate_percentage
 
 
 @require_POST
 def add_to_cart_view(request, item_id):
     """
-    Adds an item to the session-based shopping cart.
+    Adds an item to the session-based shopping cart with single-restaurant validation.
     """
     menu_item = get_object_or_404(MenuItem, id=item_id, availability=True)
     cart = Cart(request)
@@ -30,9 +31,59 @@ def add_to_cart_view(request, item_id):
     if quantity <= 0:
         quantity = 1
 
-    cart.add(item_id=menu_item.id, quantity=quantity)
-    messages.success(request, f"Added {quantity}x '{menu_item.item_name}' to your cart!")
+    clear_cart_flag = request.POST.get('clear_cart') in ('true', '1', 'yes', True)
+    existing_restaurant = cart.get_restaurant()
 
+    if existing_restaurant and existing_restaurant.id != menu_item.restaurant_id and not clear_cart_flag:
+        # Restaurant conflict: Cart already contains items from a different restaurant
+        request.session['restaurant_conflict'] = {
+            'current_restaurant_name': existing_restaurant.restaurant_name,
+            'new_restaurant_name': menu_item.restaurant.restaurant_name,
+            'item_id': menu_item.id,
+            'item_name': menu_item.item_name,
+            'quantity': quantity,
+        }
+        request.session.modified = True
+        messages.warning(
+            request,
+            f"Your cart already contains dishes from '{existing_restaurant.restaurant_name}'. "
+            f"You can only order from one restaurant at a time. Clear your cart to order from '{menu_item.restaurant.restaurant_name}'."
+        )
+        next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'storefront'
+        return redirect(next_url)
+
+    if clear_cart_flag:
+        cart.clear()
+        cart.add(item_id=menu_item.id, quantity=quantity, clear_conflicting=True)
+        request.session.pop('restaurant_conflict', None)
+        request.session.modified = True
+        messages.warning(
+            request,
+            f"Your previous cart was cleared. Added {quantity}x '{menu_item.item_name}' from '{menu_item.restaurant.restaurant_name}'."
+        )
+    else:
+        try:
+            cart.add(item_id=menu_item.id, quantity=quantity)
+            request.session.pop('restaurant_conflict', None)
+            request.session.modified = True
+            messages.success(request, f"Added {quantity}x '{menu_item.item_name}' to your cart!")
+        except MixedRestaurantCartError:
+            messages.error(
+                request,
+                f"Cart contains dishes from another restaurant. Please clear your cart first."
+            )
+
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'storefront'
+    return redirect(next_url)
+
+
+@require_POST
+def clear_cart_conflict_view(request):
+    """
+    Dismisses the restaurant conflict dialog without changing the cart.
+    """
+    request.session.pop('restaurant_conflict', None)
+    request.session.modified = True
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'storefront'
     return redirect(next_url)
 
@@ -81,20 +132,113 @@ def clear_cart_view(request):
     return redirect('cart')
 
 
+def get_cart_coupon_data(request, subtotal):
+    """
+    Validates and calculates coupon discount from session for given subtotal.
+    Returns: (coupon_instance_or_None, discount_amount: Decimal, status_message: str)
+    """
+    coupon_code = request.session.get('coupon_code')
+    if not coupon_code:
+        return None, Decimal('0.00'), ""
+
+    try:
+        coupon = Coupon.objects.get(code__iexact=coupon_code)
+    except Coupon.DoesNotExist:
+        request.session.pop('coupon_code', None)
+        request.session.modified = True
+        return None, Decimal('0.00'), "The previously applied coupon no longer exists."
+
+    is_valid, msg = coupon.is_valid_for_subtotal(subtotal)
+    if not is_valid:
+        request.session.pop('coupon_code', None)
+        request.session.modified = True
+        return None, Decimal('0.00'), msg
+
+    discount = coupon.calculate_discount(subtotal)
+    return coupon, discount, ""
+
+
+@require_POST
+def apply_coupon_view(request):
+    """
+    Validates and attaches a promo code to the session.
+    """
+    code = request.POST.get('coupon_code', '').strip().upper()
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'cart'
+
+    if not code:
+        messages.error(request, "Please enter a coupon code.")
+        return redirect(next_url)
+
+    cart = Cart(request)
+    subtotal = cart.get_total_price()
+
+    if subtotal <= Decimal('0.00'):
+        messages.error(request, "Please add items to your cart before applying a coupon.")
+        return redirect(next_url)
+
+    try:
+        coupon = Coupon.objects.get(code__iexact=code)
+    except Coupon.DoesNotExist:
+        messages.error(request, f"Coupon code '{code}' is invalid or does not exist.")
+        return redirect(next_url)
+
+    is_valid, error_msg = coupon.is_valid_for_subtotal(subtotal)
+    if not is_valid:
+        messages.error(request, error_msg)
+        return redirect(next_url)
+
+    request.session['coupon_code'] = coupon.code
+    request.session.modified = True
+    discount = coupon.calculate_discount(subtotal)
+    from django.conf import settings
+    currency = getattr(settings, 'OFO_CURRENCY_SYMBOL', '₹')
+    messages.success(request, f"Promo code '{coupon.code}' applied! Saved {currency}{discount:.2f}.")
+    return redirect(next_url)
+
+
+@require_POST
+def remove_coupon_view(request):
+    """
+    Removes currently applied coupon from the user's session.
+    """
+    code = request.session.pop('coupon_code', None)
+    request.session.modified = True
+    if code:
+        messages.info(request, f"Coupon '{code}' removed.")
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'cart'
+    return redirect(next_url)
+
+
 def cart_view(request):
     """
-    Renders the dedicated shopping cart page.
+    Renders the dedicated shopping cart page with coupon summary and dynamic delivery fee.
     """
     cart = Cart(request)
     items = cart.get_items()
-    total_price = cart.get_total_price()
-    delivery_fee = Decimal('0.00')
+    subtotal = cart.get_total_price()
+    restaurant = cart.get_restaurant()
+
+    coupon, discount_amount, coupon_msg = get_cart_coupon_data(request, subtotal)
+    if coupon_msg and not coupon:
+        messages.warning(request, coupon_msg)
+
+    net_subtotal = max(Decimal('0.00'), subtotal - discount_amount)
+    delivery_fee = calculate_delivery_fee(subtotal=net_subtotal, restaurant=restaurant)
+    tax_amount = calculate_tax(taxable_amount=net_subtotal)
+    grand_total = net_subtotal + delivery_fee + tax_amount
+    gst_rate_pct = get_gst_rate_percentage()
 
     context = {
         'cart_items': items,
-        'subtotal': total_price,
+        'restaurant': restaurant,
+        'subtotal': subtotal,
+        'coupon': coupon,
+        'discount_amount': discount_amount,
         'delivery_fee': delivery_fee,
-        'grand_total': total_price + delivery_fee,
+        'tax_amount': tax_amount,
+        'gst_rate_pct': gst_rate_pct,
+        'grand_total': grand_total,
         'is_empty': len(items) == 0,
     }
     return render(request, 'cart.html', context)
@@ -103,7 +247,7 @@ def cart_view(request):
 @login_required
 def checkout_view(request):
     """
-    Step before placing the order: Review all cart items, address, and payment method.
+    Step before placing the order: Review cart items, promo code, delivery, and payment.
     """
     cart = Cart(request)
     items = cart.get_items()
@@ -112,11 +256,37 @@ def checkout_view(request):
         messages.warning(request, "Your shopping cart is empty. Please add dishes before checking out.")
         return redirect('storefront')
 
-    total_price = cart.get_total_price()
+    if not cart.is_single_restaurant():
+        messages.error(
+            request,
+            "Your cart contains items from multiple restaurants. Please clear your cart or remove conflicting items before checking out."
+        )
+        return redirect('cart')
+
+    subtotal = cart.get_total_price()
     profile = getattr(request.user, 'profile', None)
+    restaurant = cart.get_restaurant()
+
+    coupon, discount_amount, coupon_msg = get_cart_coupon_data(request, subtotal)
+    if coupon_msg and not coupon:
+        messages.warning(request, coupon_msg)
+
+    net_subtotal = max(Decimal('0.00'), subtotal - discount_amount)
+    delivery_address = profile.address if profile else None
+    delivery_fee = calculate_delivery_fee(subtotal=net_subtotal, restaurant=restaurant, delivery_address=delivery_address)
+    tax_amount = calculate_tax(taxable_amount=net_subtotal)
+    total_price = net_subtotal + delivery_fee + tax_amount
+    gst_rate_pct = get_gst_rate_percentage()
 
     context = {
         'cart_items': items,
+        'restaurant': restaurant,
+        'subtotal': subtotal,
+        'coupon': coupon,
+        'discount_amount': discount_amount,
+        'delivery_fee': delivery_fee,
+        'tax_amount': tax_amount,
+        'gst_rate_pct': gst_rate_pct,
         'total_price': total_price,
         'profile': profile,
     }
@@ -127,7 +297,7 @@ def checkout_view(request):
 @require_POST
 def place_order_view(request):
     """
-    Finalizes the transaction from the shopping cart items atomically.
+    Finalizes the transaction from the shopping cart items atomically with server-side coupon and delivery fee validation.
     """
     cart = Cart(request)
     items = cart.get_items()
@@ -135,6 +305,13 @@ def place_order_view(request):
     if not items:
         messages.warning(request, "Your cart is empty.")
         return redirect('storefront')
+
+    if not cart.is_single_restaurant():
+        messages.error(
+            request,
+            "Cannot place order: your cart contains items from multiple restaurants. An order must be from a single restaurant."
+        )
+        return redirect('cart')
 
     payment_mode = request.POST.get('payment_mode', 'COD').strip()
     delivery_address = request.POST.get('delivery_address', '').strip()
@@ -162,13 +339,48 @@ def place_order_view(request):
         profile.phone = phone
         profile.save()
 
-    total_amount = cart.get_total_price()
+    # Server-side authoritative calculation
+    subtotal = cart.get_total_price()
+    restaurant = cart.get_restaurant()
 
     with transaction.atomic():
+        # Coupon validation and locking
+        coupon_code = request.session.get('coupon_code')
+        applied_coupon = None
+        discount_amount = Decimal('0.00')
+
+        if coupon_code:
+            try:
+                locked_coupon = Coupon.objects.select_for_update().get(code__iexact=coupon_code)
+                is_valid, err_msg = locked_coupon.is_valid_for_subtotal(subtotal)
+                if is_valid:
+                    discount_amount = locked_coupon.calculate_discount(subtotal)
+                    locked_coupon.times_used += 1
+                    locked_coupon.save()
+                    applied_coupon = locked_coupon
+                else:
+                    messages.warning(request, f"Coupon '{coupon_code}' could not be applied: {err_msg}")
+            except Coupon.DoesNotExist:
+                messages.warning(request, f"Coupon '{coupon_code}' is no longer valid.")
+
+        net_subtotal = max(Decimal('0.00'), subtotal - discount_amount)
+        delivery_fee = calculate_delivery_fee(
+            subtotal=net_subtotal,
+            restaurant=restaurant,
+            delivery_address=delivery_address
+        )
+        tax_amount = calculate_tax(taxable_amount=net_subtotal)
+        total_amount = net_subtotal + delivery_fee + tax_amount
+
         # 1. Create Order
         order = Order.objects.create(
             customer=request.user,
             status='Placed',
+            subtotal=subtotal,
+            coupon=applied_coupon,
+            discount_amount=discount_amount,
+            delivery_fee=delivery_fee,
+            tax_amount=tax_amount,
             total_amount=total_amount,
             special_instructions=special_instructions
         )
@@ -197,8 +409,10 @@ def place_order_view(request):
             delivery_status='Assigned'
         )
 
-        # 5. Clear the cart
+        # 5. Clear the cart and coupon session
         cart.clear()
+        request.session.pop('coupon_code', None)
+        request.session.modified = True
 
     messages.success(request, f"🎉 Order #{order.id} placed successfully! Track its status below.")
     return redirect('order_history')
@@ -438,7 +652,7 @@ def order_receipt_view(request, order_id):
     """
     Renders a printable tax invoice / receipt for an order.
     """
-    order = get_object_or_404(Order.objects.select_related('payment', 'delivery__partner').prefetch_related('customer', 'items__item__restaurant'), id=order_id)
+    order = get_object_or_404(Order.objects.select_related('payment', 'delivery__partner', 'coupon').prefetch_related('customer', 'items__item__restaurant'), id=order_id)
 
     # Security check: User must be staff or the customer who placed the order
     if not request.user.is_staff and order.customer != request.user:
@@ -455,9 +669,14 @@ def order_receipt_view(request, order_id):
             'line_total': line_total
         })
 
+    calculated_subtotal = sum(item['line_total'] for item in items_with_totals)
+    order_subtotal = order.subtotal if order.subtotal > Decimal('0.00') else calculated_subtotal
+
     context = {
         'order': order,
+        'order_subtotal': order_subtotal,
         'items_with_totals': items_with_totals,
         'restaurant_name': order.items.first().item.restaurant.restaurant_name if order.items.exists() else 'Food Express Partner',
+        'gst_rate_pct': get_gst_rate_percentage(),
     }
     return render(request, 'receipt.html', context)
