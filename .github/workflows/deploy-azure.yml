@@ -1,0 +1,90 @@
+name: Build and Deploy to Azure App Service
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Run Automated Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Django System & Database Configuration
+        env:
+          DJANGO_SECRET_KEY: 'ci-temporary-validation-secret-key-for-test-run-3.12'
+          DJANGO_DEBUG: 'True'
+          DJANGO_ALLOWED_HOSTS: 'localhost,127.0.0.1,testserver'
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python run_tests.py
+
+  build-and-deploy:
+    name: Package & Deploy to Azure
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Build Dependencies & Collect Static Files
+        env:
+          DJANGO_SECRET_KEY: 'temporary-build-secret-key-for-collectstatic-only'
+          DJANGO_DEBUG: 'False'
+          DJANGO_ALLOWED_HOSTS: '*'
+          DJANGO_SECURE_SSL_REDIRECT: 'False'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python manage.py collectstatic --noinput
+
+      - name: Create Clean Deployment Archive
+        run: |
+          zip -r release.zip . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x ".venv/*" \
+            -x "venv/*" \
+            -x "*.pyc" \
+            -x "__pycache__/*" \
+            -x "*.db" \
+            -x "*.sqlite3" \
+            -x "docs/*" \
+            -x "PROJECT_*.md"
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME || 'ofo-dbms-app' }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: release.zip
+          startup-command: 'bash startup.sh'
