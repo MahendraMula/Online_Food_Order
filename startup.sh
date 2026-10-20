@@ -6,6 +6,12 @@ set -e
 
 echo "=== [OFO-DBMS] Initializing Azure App Service Environment ==="
 
+# 0. Ensure persistent data directory exists if configured
+if [ -n "$OFO_DATA_DIR" ]; then
+    echo "--> Ensuring persistent data directory exists at $OFO_DATA_DIR..."
+    mkdir -p "$OFO_DATA_DIR"
+fi
+
 # 1. Apply database migrations to both SQLite databases
 echo "--> Applying migrations to primary domain database (food_ordering.db)..."
 python manage.py migrate --run-syncdb

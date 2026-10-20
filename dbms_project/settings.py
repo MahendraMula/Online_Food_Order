@@ -59,14 +59,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'dbms_project.wsgi.application'
 ASGI_APPLICATION = 'dbms_project.asgi.application'
 
+DATA_DIR = Path(os.environ.get('OFO_DATA_DIR', str(BASE_DIR)))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'food_ordering.db',
+        'NAME': DATA_DIR / 'food_ordering.db',
     },
     'django_database': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'django_database.db',
+        'NAME': DATA_DIR / 'django_database.db',
     }
 }
 
@@ -104,6 +107,8 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # Security & SSL Settings (Configured dynamically based on environment)
 if not DEBUG:
+    # Inform Django to trust Azure App Service reverse proxy SSL termination
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = os.environ.get('DJANGO_SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -117,6 +122,16 @@ else:
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+
+# CSRF Trusted Origins for HTTPS (Azure & Custom Domains)
+raw_csrf_origins = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '')
+if raw_csrf_origins:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in raw_csrf_origins.split(',') if o.strip()]
+else:
+    # Auto-generate https origins from ALLOWED_HOSTS for convenience on Azure
+    CSRF_TRUSTED_ORIGINS = [
+        f"https://{h}" for h in ALLOWED_HOSTS if h not in ('*', '127.0.0.1', 'localhost', 'testserver')
+    ]
 
 # Commercial Essentials: Currency, Delivery & Tax Settings
 OFO_CURRENCY_SYMBOL = os.environ.get('OFO_CURRENCY_SYMBOL', '₹')

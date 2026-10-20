@@ -39,9 +39,13 @@ local_settings.py
 !.env.example
 
 # --- Media / User Uploads ---
-/images/
+# Ignore dynamic uploads but track seed catalog assets
 /media/
 /static/collected/
+/images/*
+!/images/menu/
+!/images/restaurants/
+!/images/categories/
 
 # --- Collected Static Files (after collectstatic) ---
 staticfiles/
