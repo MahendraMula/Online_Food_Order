@@ -6,6 +6,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-ofo-dbms-strong-development-fallback-key-2026-production-ready')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+# Production Security Gate: Prevent booting with insecure default secret key when DEBUG=False
+if not DEBUG and (not SECRET_KEY or SECRET_KEY.startswith('django-insecure-')):
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be explicitly set to a secure, unique production value when DEBUG=False.")
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost,testserver,*').split(',') if h.strip()]
 
 INSTALLED_APPS = [
