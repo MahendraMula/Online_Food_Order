@@ -6,10 +6,11 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
 
 from restaurants.models import MenuItem, Category, Restaurant
+from accounts.models import CustomerProfile
 from .models import Order, OrderItem, Payment, Delivery, DeliveryPartner, Coupon
 from .cart import Cart, MixedRestaurantCartError
 from .services import calculate_delivery_fee, calculate_tax, get_gst_rate_percentage
@@ -333,11 +334,13 @@ def place_order_view(request):
         return redirect('checkout')
 
     # Update profile address/phone if provided
-    profile = getattr(request.user, 'profile', None)
-    if profile:
-        profile.address = delivery_address
-        profile.phone = phone
-        profile.save()
+    CustomerProfile.objects.update_or_create(
+        user=request.user,
+        defaults={
+            'address': delivery_address,
+            'phone': phone,
+        }
+    )
 
     # Server-side authoritative calculation
     subtotal = cart.get_total_price()
@@ -528,8 +531,10 @@ def admin_dashboard_view(request):
     for cat in Category.objects.all():
         cat_rev = OrderItem.objects.filter(
             item__category=cat
-        ).exclude(order__status='Cancelled').aggregate(
-            total=Sum('order__total_amount')
+        ).exclude(order__status='Cancelled').annotate(
+            line_total=F('quantity') * F('item__price')
+        ).aggregate(
+            total=Sum('line_total')
         )['total'] or Decimal('0.00')
         category_sales.append({
             'name': cat.name,
@@ -559,6 +564,7 @@ def admin_dashboard_view(request):
 
 
 @login_required
+@require_POST
 def update_order_status_view(request, order_id):
     """
     Staff action to advance order workflow and assign delivery drivers.
@@ -568,45 +574,44 @@ def update_order_status_view(request, order_id):
         return redirect('storefront')
 
     order = get_object_or_404(Order, id=order_id)
+    new_status = request.POST.get('status')
+    driver_id = request.POST.get('driver_id')
 
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        driver_id = request.POST.get('driver_id')
+    valid_statuses = {choice[0] for choice in Order.STATUS_CHOICES}
+    with transaction.atomic():
+        if new_status and new_status in valid_statuses:
+            order.status = new_status
+            order.save()
 
-        with transaction.atomic():
-            if new_status:
-                order.status = new_status
-                order.save()
+        # Handle Delivery Record
+        delivery, _ = Delivery.objects.get_or_create(order=order)
+        if driver_id:
+            try:
+                driver = DeliveryPartner.objects.get(id=int(driver_id))
+                delivery.partner = driver
+            except (DeliveryPartner.DoesNotExist, ValueError, TypeError):
+                pass
 
-            # Handle Delivery Record
-            delivery, _ = Delivery.objects.get_or_create(order=order)
-            if driver_id:
-                try:
-                    driver = DeliveryPartner.objects.get(id=driver_id)
-                    delivery.partner = driver
-                except DeliveryPartner.DoesNotExist:
-                    pass
+        if new_status == 'Out for Delivery':
+            delivery.delivery_status = 'Picked Up'
+        elif new_status == 'Delivered':
+            delivery.delivery_status = 'Delivered'
+            delivery.delivery_time = timezone.now()
+            # Mark payment as Paid if completed
+            if hasattr(order, 'payment'):
+                order.payment.payment_status = 'Paid'
+                order.payment.save()
+        elif new_status == 'Preparing':
+            delivery.delivery_status = 'Assigned'
 
-            if new_status == 'Out for Delivery':
-                delivery.delivery_status = 'Picked Up'
-            elif new_status == 'Delivered':
-                delivery.delivery_status = 'Delivered'
-                delivery.delivery_time = timezone.now()
-                # Mark payment as Paid if completed
-                if hasattr(order, 'payment'):
-                    order.payment.payment_status = 'Paid'
-                    order.payment.save()
-            elif new_status == 'Preparing':
-                delivery.delivery_status = 'Assigned'
+        delivery.save()
 
-            delivery.save()
-
-        messages.success(request, f"Updated Order #{order.id} status to '{order.status}'.")
-
+    messages.success(request, f"Updated Order #{order.id} status to '{order.status}'.")
     return redirect('admin_dashboard')
 
 
 @login_required
+@require_POST
 def toggle_item_availability_view(request, item_id):
     """
     Staff quick action to toggle menu dish stock availability.
@@ -616,16 +621,15 @@ def toggle_item_availability_view(request, item_id):
         return redirect('storefront')
 
     item = get_object_or_404(MenuItem, id=item_id)
-    if request.method == 'POST':
-        item.availability = not item.availability
-        item.save()
-        status_text = "In Stock" if item.availability else "Out of Stock"
-        messages.info(request, f"'{item.item_name}' is now marked as {status_text}.")
-
+    item.availability = not item.availability
+    item.save()
+    status_text = "In Stock" if item.availability else "Out of Stock"
+    messages.info(request, f"'{item.item_name}' is now marked as {status_text}.")
     return redirect('admin_dashboard')
 
 
 @login_required
+@require_POST
 def add_delivery_partner_view(request):
     """
     Staff action to onboard a new delivery driver.
@@ -634,16 +638,19 @@ def add_delivery_partner_view(request):
         messages.error(request, "Unauthorized access.")
         return redirect('storefront')
 
-    if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
-        phone = request.POST.get('phone', '').strip()
+    name = request.POST.get('name', '').strip()
+    phone = request.POST.get('phone', '').strip()
 
-        if name and phone:
-            DeliveryPartner.objects.create(name=name, phone=phone)
-            messages.success(request, f"Driver '{name}' added successfully.")
-        else:
-            messages.error(request, "Please provide valid name and phone number.")
+    if not name:
+        messages.error(request, "Please provide a valid delivery partner name.")
+        return redirect('admin_dashboard')
 
+    if not phone or not re.match(r'^\+?[\d\s\-()]{7,20}$', phone):
+        messages.error(request, "Please provide a valid contact phone number (at least 7 digits).")
+        return redirect('admin_dashboard')
+
+    DeliveryPartner.objects.create(name=name, phone=phone)
+    messages.success(request, f"Driver '{name}' added successfully.")
     return redirect('admin_dashboard')
 
 

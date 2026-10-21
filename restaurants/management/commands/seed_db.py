@@ -70,8 +70,17 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        verbosity = options.get('verbosity', 1)
+
+        def log(msg, style=None):
+            if verbosity > 0:
+                if style:
+                    self.stdout.write(style(msg))
+                else:
+                    self.stdout.write(msg)
+
         if options['clear']:
-            self.stdout.write(self.style.WARNING('Clearing existing data...'))
+            log('Clearing existing data...', self.style.WARNING)
             Review.objects.all().delete()
             OrderItem.objects.all().delete()
             Payment.objects.all().delete()
@@ -83,21 +92,21 @@ class Command(BaseCommand):
             DeliveryPartner.objects.all().delete()
             CustomerProfile.objects.all().delete()
             User.objects.filter(is_superuser=False).delete()
-            self.stdout.write(self.style.WARNING('All data cleared.'))
+            log('All data cleared.', self.style.WARNING)
 
-        self.stdout.write('Seeding categories...')
+        log('Seeding categories...')
         cat_map = {}
         for c in CATEGORIES:
             obj, _ = Category.objects.get_or_create(name=c['name'], defaults={'icon': c['icon'], 'description': c['description']})
             cat_map[c['name']] = obj
 
-        self.stdout.write('Seeding restaurants...')
+        log('Seeding restaurants...')
         rest_map = {}
         for r in RESTAURANTS:
             obj, _ = Restaurant.objects.get_or_create(restaurant_name=r['name'], defaults={'address': r['address'], 'rating': r['rating'], 'image_url': r['image_url']})
             rest_map[r['name']] = obj
 
-        self.stdout.write('Seeding menu items...')
+        log('Seeding menu items...')
         item_map = {}
         for item in MENU_ITEMS:
             cat_obj = cat_map.get(item['cat'])
@@ -119,13 +128,13 @@ class Command(BaseCommand):
             )
             item_map[item['name']] = obj
 
-        self.stdout.write('Seeding delivery partners...')
+        log('Seeding delivery partners...')
         driver_map = {}
         for d in DELIVERY_PARTNERS:
             obj, _ = DeliveryPartner.objects.get_or_create(name=d['name'], defaults={'phone': d['phone']})
             driver_map[d['name']] = obj
 
-        self.stdout.write('Seeding demo customer users...')
+        log('Seeding demo customer users...')
         demo_users = []
         customers_data = [
             {'username': 'customer_alice', 'email': 'alice@demo.com', 'first_name': 'Alice', 'last_name': 'Walker', 'phone': '+1 555-4001', 'address': '101 Maple St'},
@@ -142,7 +151,7 @@ class Command(BaseCommand):
             CustomerProfile.objects.get_or_create(user=user, defaults={'phone': cd['phone'], 'address': cd['address']})
             demo_users.append(user)
 
-        self.stdout.write('Seeding sample orders...')
+        log('Seeding sample orders...')
         sample_orders = [
             {
                 'customer': demo_users[0],
@@ -209,7 +218,7 @@ class Command(BaseCommand):
                 )
 
         # Seed some reviews for delivered orders
-        self.stdout.write('Seeding reviews...')
+        log('Seeding reviews...')
         delivered_orders = Order.objects.filter(status='Delivered')
         for dord in delivered_orders:
             first_item = dord.items.first()
@@ -224,7 +233,7 @@ class Command(BaseCommand):
                     }
                 )
 
-        self.stdout.write(self.style.SUCCESS(
+        log(
             '\n[OK] Seed completed successfully!'
             f'\n   Categories: {Category.objects.count()}'
             f'\n   Restaurants: {Restaurant.objects.count()}'
@@ -236,5 +245,6 @@ class Command(BaseCommand):
             '\n\nDemo customer credentials:'
             '\n   Username: customer_alice | Password: Demo@1234'
             '\n   Username: customer_bob   | Password: Demo@1234'
-            '\n   Username: customer_carol | Password: Demo@1234'
-        ))
+            '\n   Username: customer_carol | Password: Demo@1234',
+            self.style.SUCCESS
+        )

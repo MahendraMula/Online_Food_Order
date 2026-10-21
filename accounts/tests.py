@@ -65,6 +65,7 @@ class AccountsModelAndFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('address', form.errors)
 
+
 class AccountsViewTests(TestCase):
     databases = '__all__'
 
@@ -72,6 +73,11 @@ class AccountsViewTests(TestCase):
         self.client = Client()
         self.user = User.objects.create_user(username='testuser', password='password123', email='test@example.com')
         self.profile = CustomerProfile.objects.create(user=self.user, phone='+1 555-0199', address='100 Pine St')
+
+    def test_signup_view_get(self):
+        resp = self.client.get('/accounts/signup/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'form')
 
     def test_signup_view_post(self):
         resp = self.client.post('/accounts/signup/', {
@@ -87,6 +93,55 @@ class AccountsViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(User.objects.filter(username='newuser').exists())
         self.assertTrue(CustomerProfile.objects.filter(phone='+1 555-0200').exists())
+
+    def test_signup_view_authenticated_redirect(self):
+        self.client.force_login(self.user)
+        resp = self.client.get('/accounts/signup/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp['Location'], '/')
+
+    def test_login_view_get(self):
+        resp = self.client.get('/accounts/login/')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_login_view_post_success(self):
+        resp = self.client.post('/accounts/login/', {
+            'username': 'testuser',
+            'password': 'password123'
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context['user'].is_authenticated)
+
+    def test_login_view_post_invalid(self):
+        resp = self.client.post('/accounts/login/', {
+            'username': 'testuser',
+            'password': 'wrongpassword'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context['user'].is_authenticated)
+
+    def test_logout_view_get(self):
+        self.client.force_login(self.user)
+        resp = self.client.get('/accounts/logout/', follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context['user'].is_authenticated)
+
+    def test_logout_view_post(self):
+        self.client.force_login(self.user)
+        resp = self.client.post('/accounts/logout/', follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context['user'].is_authenticated)
+
+    def test_profile_view_get_authenticated(self):
+        self.client.force_login(self.user)
+        resp = self.client.get('/accounts/profile/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '100 Pine St')
+
+    def test_profile_view_get_unauthenticated(self):
+        resp = self.client.get('/accounts/profile/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp['Location'])
 
     def test_profile_view_update(self):
         self.client.force_login(self.user)
@@ -115,3 +170,15 @@ class AccountsViewTests(TestCase):
         }, follow=True)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Please enter a valid phone number')
+
+    def test_profile_view_invalid_address(self):
+        self.client.force_login(self.user)
+        resp = self.client.post('/accounts/profile/', {
+            'first_name': 'Johnny',
+            'last_name': 'Doe',
+            'email': 'johnny@example.com',
+            'phone': '+1 555-9999',
+            'address': 'abc'  # Invalid address (< 5 chars)
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Address must be at least 5 characters long')

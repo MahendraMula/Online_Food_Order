@@ -59,11 +59,35 @@ class RestaurantModelAndDiscoveryTests(TestCase):
         self.assertContains(resp, 'Bacon Beef Burger')
         self.assertNotContains(resp, 'Margherita Pizza')
 
+    def test_storefront_category_filter_invalid_param(self):
+        # Non-numeric category shouldn't crash with ValueError
+        resp = self.client.get('/?category=invalid_cat')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Margherita Pizza')
+
+    def test_storefront_restaurant_filter(self):
+        resp = self.client.get(f'/?restaurant={self.rest1.id}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Margherita Pizza')
+        self.assertNotContains(resp, 'Bacon Beef Burger')
+
+    def test_storefront_restaurant_filter_invalid_param(self):
+        # Non-numeric restaurant shouldn't crash
+        resp = self.client.get('/?restaurant=notanumber')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Margherita Pizza')
+
     def test_storefront_veg_filter(self):
         resp = self.client.get('/?veg=1')
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Margherita Pizza')
         self.assertNotContains(resp, 'Bacon Beef Burger')
+
+    def test_storefront_non_veg_filter(self):
+        resp = self.client.get('/?veg=0')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Bacon Beef Burger')
+        self.assertNotContains(resp, 'Margherita Pizza')
 
     def test_storefront_sort_price_asc(self):
         resp = self.client.get('/?sort=price_asc')
@@ -71,6 +95,27 @@ class RestaurantModelAndDiscoveryTests(TestCase):
         items = list(resp.context['menu_items'])
         self.assertEqual(items[0], self.item_burger)  # 10.00 < 12.00
         self.assertEqual(items[1], self.item_pizza)
+
+    def test_storefront_sort_price_desc(self):
+        resp = self.client.get('/?sort=price_desc')
+        self.assertEqual(resp.status_code, 200)
+        items = list(resp.context['menu_items'])
+        self.assertEqual(items[0], self.item_pizza)   # 12.00 > 10.00
+        self.assertEqual(items[1], self.item_burger)
+
+    def test_storefront_sort_prep_time(self):
+        resp = self.client.get('/?sort=prep_time')
+        self.assertEqual(resp.status_code, 200)
+        items = list(resp.context['menu_items'])
+        self.assertEqual(items[0], self.item_pizza)   # 15 < 20
+        self.assertEqual(items[1], self.item_burger)
+
+    def test_storefront_sort_rating(self):
+        resp = self.client.get('/?sort=rating')
+        self.assertEqual(resp.status_code, 200)
+        items = list(resp.context['menu_items'])
+        self.assertEqual(items[0], self.item_pizza)   # Luigi Pizzeria 4.8 > Burger House 4.2
+        self.assertEqual(items[1], self.item_burger)
 
 
 class ReviewSystemTests(TestCase):
@@ -137,6 +182,23 @@ class ReviewSystemTests(TestCase):
         }, follow=True)
         self.assertEqual(resp2.status_code, 200)
         self.assertContains(resp2, 'Rating must be an integer between 1 and 5 stars')
+
+    def test_submit_review_invalid_restaurant_id(self):
+        self.client.force_login(self.user)
+        resp = self.client.post('/review/submit/', {
+            'restaurant_id': 'invalid_id',
+            'rating': 5,
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Invalid restaurant specified')
+
+    def test_submit_review_nonexistent_restaurant_id(self):
+        self.client.force_login(self.user)
+        resp = self.client.post('/review/submit/', {
+            'restaurant_id': 99999,
+            'rating': 5,
+        })
+        self.assertEqual(resp.status_code, 404)
 
     def test_review_requires_login(self):
         resp = self.client.post('/review/submit/', {

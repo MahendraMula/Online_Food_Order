@@ -190,6 +190,65 @@ class OrdersCartAndWorkflowTests(TestCase):
         self.item1.refresh_from_db()
         self.assertFalse(self.item1.availability)
 
+    def test_cancel_order_view_placed_success(self):
+        order = Order.objects.create(customer=self.user, status='Placed', total_amount=Decimal('15.00'))
+        self.client.force_login(self.user)
+        resp = self.client.post(f'/orders/cancel/{order.id}/', follow=True)
+        self.assertEqual(resp.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'Cancelled')
+
+    def test_cancel_order_view_in_progress_fails(self):
+        order = Order.objects.create(customer=self.user, status='Preparing', total_amount=Decimal('15.00'))
+        self.client.force_login(self.user)
+        resp = self.client.post(f'/orders/cancel/{order.id}/', follow=True)
+        self.assertEqual(resp.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'Preparing')
+        self.assertContains(resp, 'already in progress')
+
+    def test_confirm_order_view_updates_payment(self):
+        order = Order.objects.create(customer=self.user, status='Pending', total_amount=Decimal('15.00'))
+        self.client.force_login(self.user)
+        resp = self.client.post(f'/orders/confirm/{order.id}/', {'payment_mode': 'Card'}, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'Placed')
+        self.assertEqual(order.payment.payment_mode, 'Card')
+        self.assertEqual(order.payment.payment_status, 'Paid')
+
+    def test_unauthorized_receipt_view_redirects(self):
+        other_user = User.objects.create_user(username='other_customer', password='password123')
+        order = Order.objects.create(customer=other_user, status='Placed', total_amount=Decimal('20.00'))
+        self.client.force_login(self.user)
+        resp = self.client.get(f'/orders/receipt/{order.id}/', follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'not authorized to view this receipt')
+
+    def test_add_delivery_partner_view(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post('/orders/drivers/add/', {
+            'name': 'Speedy Sam',
+            'phone': '+1 555-4321',
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(DeliveryPartner.objects.filter(name='Speedy Sam').exists())
+
+    def test_add_delivery_partner_invalid_phone(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post('/orders/drivers/add/', {
+            'name': 'Slow Sam',
+            'phone': '12',
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'valid contact phone number')
+
+    def test_non_staff_dashboard_access_denied(self):
+        self.client.force_login(self.user)
+        resp = self.client.get('/orders/dashboard/', follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Administrator credentials required')
+
 
 class SingleRestaurantCartValidationTests(TestCase):
     databases = '__all__'

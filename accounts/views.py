@@ -1,9 +1,8 @@
 import re
 from decimal import Decimal
 from django.shortcuts import render, redirect
-from django.contrib.auth import login
+from django.contrib.auth import login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.db.models import Sum
 
@@ -11,16 +10,20 @@ from .forms import CustomerSignupForm
 from .models import CustomerProfile
 
 def signup_view(request):
+    if request.user.is_authenticated:
+        return redirect('/')
     if request.method == 'POST':
         form = CustomerSignupForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
             user.set_password(form.cleaned_data['password'])
             user.save()
-            CustomerProfile.objects.create(
+            CustomerProfile.objects.update_or_create(
                 user=user,
-                phone=form.cleaned_data['phone'],
-                address=form.cleaned_data['address']
+                defaults={
+                    'phone': form.cleaned_data['phone'],
+                    'address': form.cleaned_data['address']
+                }
             )
             login(request, user)
             messages.success(request, f"Welcome to Food Express, {user.username}! Your account is ready.")
@@ -28,6 +31,17 @@ def signup_view(request):
     else:
         form = CustomerSignupForm()
     return render(request, 'signup.html', {'form': form})
+
+
+def logout_view(request):
+    """
+    Handles both GET and POST requests for logging out.
+    Ensures backwards compatibility and smooth UI transitions across browsers.
+    """
+    if request.user.is_authenticated:
+        auth_logout(request)
+        messages.info(request, "You have been logged out successfully.")
+    return redirect('login')
 
 
 @login_required

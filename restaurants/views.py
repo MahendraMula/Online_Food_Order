@@ -28,30 +28,39 @@ def storefront_view(request):
             Q(restaurant__restaurant_name__icontains=query)
         )
 
-    # Category Filter
+    # Category Filter (defensive integer check)
     if category_id:
-        menu_items = menu_items.filter(category_id=category_id)
+        if category_id.isdigit():
+            menu_items = menu_items.filter(category_id=int(category_id))
+        else:
+            category_id = ''
 
     # Dietary Preference (1 for Veg, 0 for Non-Veg)
     if veg_filter == '1':
         menu_items = menu_items.filter(is_veg=True)
     elif veg_filter == '0':
         menu_items = menu_items.filter(is_veg=False)
+    else:
+        veg_filter = ''
 
-    # Restaurant Filter
+    # Restaurant Filter (defensive integer check)
     if restaurant_id:
-        menu_items = menu_items.filter(restaurant_id=restaurant_id)
+        if restaurant_id.isdigit():
+            menu_items = menu_items.filter(restaurant_id=int(restaurant_id))
+        else:
+            restaurant_id = ''
 
     # Sorting
-    if sort_by == 'price_asc':
-        menu_items = menu_items.order_by('price')
-    elif sort_by == 'price_desc':
-        menu_items = menu_items.order_by('-price')
-    elif sort_by == 'prep_time':
-        menu_items = menu_items.order_by('preparation_time')
-    elif sort_by == 'rating':
-        menu_items = menu_items.order_by('-restaurant__rating')
+    sort_mapping = {
+        'price_asc': 'price',
+        'price_desc': '-price',
+        'prep_time': 'preparation_time',
+        'rating': '-restaurant__rating',
+    }
+    if sort_by in sort_mapping:
+        menu_items = menu_items.order_by(sort_mapping[sort_by])
     else:
+        sort_by = ''
         menu_items = menu_items.order_by('id')
 
     categories = Category.objects.all()
@@ -79,12 +88,12 @@ def submit_review_view(request):
     """
     Submits a rating and customer review for a restaurant/dish and updates restaurant aggregate rating.
     """
-    restaurant_id = request.POST.get('restaurant_id')
+    restaurant_id = request.POST.get('restaurant_id', '').strip()
     raw_rating = request.POST.get('rating', '5')
     comment = request.POST.get('comment', '').strip()
-    menu_item_id = request.POST.get('menu_item_id')
+    menu_item_id = request.POST.get('menu_item_id', '').strip()
 
-    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'order_history'
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or '/'
 
     # Rating validation
     try:
@@ -96,10 +105,15 @@ def submit_review_view(request):
         messages.error(request, "Invalid rating value provided.")
         return redirect(next_url)
 
-    restaurant = get_object_or_404(Restaurant, id=restaurant_id)
+    # Restaurant ID validation
+    if not restaurant_id or not restaurant_id.isdigit():
+        messages.error(request, "Invalid restaurant specified.")
+        return redirect(next_url)
+
+    restaurant = get_object_or_404(Restaurant, id=int(restaurant_id))
     menu_item = None
-    if menu_item_id:
-        menu_item = MenuItem.objects.filter(id=menu_item_id, restaurant=restaurant).first()
+    if menu_item_id and menu_item_id.isdigit():
+        menu_item = MenuItem.objects.filter(id=int(menu_item_id), restaurant=restaurant).first()
 
     Review.objects.create(
         customer=request.user,
