@@ -19,9 +19,6 @@ python manage.py migrate --run-syncdb
 echo "--> Applying migrations to framework database (django_database.db)..."
 python manage.py migrate --database=django_database --run-syncdb
 
-# 2. Collect and compress static assets with WhiteNoise
-echo "--> Collecting and hashing static assets with WhiteNoise..."
-python manage.py collectstatic --noinput
 
 # 3. Auto-seed initial demo catalog if database is unpopulated
 echo "--> Verifying database seed state..."
