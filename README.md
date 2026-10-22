@@ -59,7 +59,7 @@ The system is configured, containerized, and deployed as a publicly accessible w
 
 | Deployment Attribute | Production Configuration |
 |---|---|
-| **Public URL** | `https://ofo-dbms-a9.azurewebsites.net` *(or custom Azure Web App hostname)* |
+| **Public URL** | `https://ofo-dbms-a9-apfndzczcnaxgxdj.centralindia-01.azurewebsites.net/` *(or custom Azure Web App hostname)* |
 | **Hosting Platform** | Microsoft Azure App Service (Linux Web App) |
 | **Runtime Stack** | Python 3.12 (B1 / S1 App Service Tier) |
 | **Web Server / WSGI** | Gunicorn 23.x with threaded workers (`gthread`) on port 8000 |
@@ -501,7 +501,7 @@ Azure App Service terminates incoming HTTPS connections at the front-end Azure l
   Django now recognizes that Azure's reverse proxy already secured the connection via TLS/SSL.
 
 #### 2. Cross-Site Request Forgery (CSRF) for Public Origins
-Browsers submitting login credentials, address updates, cart items, or payments from the public web transmit HTTPS origin headers (`https://ofo-dbms-a9.azurewebsites.net`).
+Browsers submitting login credentials, address updates, cart items, or payments from the public web transmit HTTPS origin headers (`https://ofo-dbms-a9-apfndzczcnaxgxdj.centralindia-01.azurewebsites.net/`).
 * **The Problem**: Django's CSRF protection strictly blocks requests whose `Origin` header does not match `CSRF_TRUSTED_ORIGINS`, throwing `HTTP 403 Forbidden`.
 * **The Solution**: In `dbms_project/settings.py`, dynamic trusted origin synthesis was implemented:
   ```python
@@ -674,7 +674,7 @@ The following application settings are configured in the **Azure Portal** (`App 
 | `DJANGO_SECRET_KEY` | *(50+ Character Crypto Secret)* | Cryptographic signing for sessions and tokens |
 | `DJANGO_DEBUG` | `False` | Disables debug mode and activates security features |
 | `DJANGO_ALLOWED_HOSTS` | `*.azurewebsites.net,ofo-dbms-a9.azurewebsites.net` | Whitelisted HTTP Host headers |
-| `DJANGO_CSRF_TRUSTED_ORIGINS`| `https://ofo-dbms-a9.azurewebsites.net` | Permitted origin domains for POST forms |
+| `DJANGO_CSRF_TRUSTED_ORIGINS`| `https://ofo-dbms-a9-apfndzczcnaxgxdj.centralindia-01.azurewebsites.net/` | Permitted origin domains for POST forms |
 | `DJANGO_SECURE_SSL_REDIRECT`| `True` | Forces all HTTP traffic to HTTPS |
 | `OFO_DATA_DIR` | `/home/data` | Directs SQLite databases to persistent storage |
 | `WEBSITES_PORT` | `8000` | Informs Azure App Service router of Gunicorn port |
